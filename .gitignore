@@ -1,3 +1,11 @@
+.DS_Store
+.github/
+/.idea/
+/results/
+/bin/
+/obj/
+/data/
+
 # Prerequisites
 *.d
 
