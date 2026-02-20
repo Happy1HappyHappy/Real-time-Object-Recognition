@@ -13,7 +13,9 @@
 #include <opencv2/opencv.hpp>
 
 cv::Mat PreProcessor::process(const cv::Mat &input)
-{
+{   
+   MorphologicalFilter myFilter;
+
     // cv thresholding to get a binary image
     cv::Mat gray;
     // binary image
@@ -37,7 +39,6 @@ cv::Mat PreProcessor::process(const cv::Mat &input)
     cv::waitKey(0);
 
     // apply morphological filter to remove noise
-    MorphologicalFilter myFilter;
     myFilter.defaultDilationErosion(binary, cleanedBinary);
     cv::imshow("3. Cleaned Binary Image", cleanedBinary);
     cv::waitKey(0);
