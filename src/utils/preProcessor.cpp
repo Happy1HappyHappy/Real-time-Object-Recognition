@@ -7,11 +7,14 @@
 */
 
 #include "preProcessor.hpp"
+#include "extractor.hpp"
+#include "distanceTransform.hpp"
 #include "regionDetect.hpp"
 #include <opencv2/opencv.hpp>
 
 cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
 {
+<<<<<<< Updated upstream
   // Thresholding to get a binary image
   cv::Mat gray;
   cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
@@ -29,11 +32,48 @@ cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
   RegionDetect::grassfire(binary, processedImg);
 
   // Region segmentation using two-pass segmentation algorithm
+=======
+  MorphologicalFilter myFilter;
+
+  // cv thresholding to get a binary image
+  cv::Mat gray;
+  // binary image
+  cv::Mat binary;
+  // cleaned binary image
+  cv::Mat cleanedBinary;
+  // region image
+  cv::Mat region;
+
+  // convert to grey scale
+  cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+  cv::imshow("1. Gray Image", gray);
+  cv::waitKey(0);
+
+  // apply thresholding to get a binary image
+  Threadsholding::dynamicThreadsHold(gray, binary);
+  cv::imshow("2. Binary Image", binary);
+  cv::waitKey(0);
+
+  // apply morphological filter to remove noise
+  myFilter.defaultDilationErosion(binary, cleanedBinary);
+  cv::imshow("3. Cleaned Binary Image", cleanedBinary);
+  cv::waitKey(0);
+
+  // Region detection using grassfire algorithm
+  DistanceTransform::grassfire(cleanedBinary, region);
+
+  // Display region
+  cv::Mat regionVis;
+  cv::normalize(region, regionVis, 0, 255, cv::NORM_MINMAX, CV_8U);
+  cv::imshow("4. Region Map", regionVis);
+  cv::waitKey(0);
+>>>>>>> Stashed changes
 
   // Region Analysis to filter out small regions and get the region of interest (ROI)
   // Assign the ROI to the output parameter for use in feature extraction
 
   // output = RegionDetect::getROI(processedImg);
+  cv::Mat processedImg = input.clone(); // for display/testing(bounding boxes, etc.)
 
   return processedImg; // Return image with detected regions for display/testing(bounding boxes, etc.)
 }

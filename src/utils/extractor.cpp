@@ -22,7 +22,8 @@ int BaselineExtractor::extractMat(
 {
     // TODO:
     // Pre-process the frame and get the region of interest (ROI)
-
+    cv::Mat roi;
+    PreProcessor::process(image, roi);
     // Bounding box of the ROI on the current frame
 
     // Extract feature vector from the ROI using the baseline extractor
