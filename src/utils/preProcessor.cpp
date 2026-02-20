@@ -9,27 +9,48 @@
 #include "preProcessor.hpp"
 #include "regionDetect.hpp"
 #include "thresholding.hpp"
+#include "morphologicalFilter.hpp"
 #include <opencv2/opencv.hpp>
 
-cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
-{
-  // Thresholding to get a binary image
-  cv::Mat gray;
-  cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+cv::Mat PreProcessor::process(const cv::Mat &input)
+{   
+   MorphologicalFilter myFilter;
 
-  cv::Mat binary;
-  cv::threshold(gray, binary,
-                128, // threshold value
-                255, // max value
-                cv::THRESH_BINARY);
-  cv::Mat processedImg = input.clone();
+    // cv thresholding to get a binary image
+    cv::Mat gray;
+    // binary image
+    cv::Mat binary;
+    // cleaned binary image
+    cv::Mat cleanedBinary;
+    // region image
+    cv::Mat region;
 
-  // Morphological operations to clean up the binary image
+    // ultimate output(not yet implemented)
+    cv::Mat output;
+    
+    // convert to grey scale
+    cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+    cv::imshow("1. Gray Image", gray);
+    cv::waitKey(0);
+    
+    // apply thresholding to get a binary image
+    Threadsholding::dynamicThreadsHold(gray, binary);
+    cv::imshow("2. Binary Image", binary);
+    cv::waitKey(0);
 
-  // Connected components using grassfire algorithm
-  RegionDetect::grassfire(binary, processedImg);
-
-  // Region segmentation using two-pass segmentation algorithm
+    // apply morphological filter to remove noise
+    myFilter.defaultDilationErosion(binary, cleanedBinary);
+    cv::imshow("3. Cleaned Binary Image", cleanedBinary);
+    cv::waitKey(0);
+    
+    // Region detection using grassfire algorithm
+    RegionDetect::grassfire(cleanedBinary, region);
+    
+    // Display region
+    cv::Mat regionVis;
+    cv::normalize(region, regionVis, 0, 255, cv::NORM_MINMAX, CV_8U);
+    cv::imshow("4. Region Map", regionVis);
+    cv::waitKey(0);
 
   // Region Analysis to filter out small regions and get the region of interest (ROI)
   // Assign the ROI to the output parameter for use in feature extraction
