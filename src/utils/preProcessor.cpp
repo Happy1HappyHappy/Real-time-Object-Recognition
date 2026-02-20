@@ -8,6 +8,7 @@
 
 #include "preProcessor.hpp"
 #include "regionDetect.hpp"
+#include "thresholding.hpp"
 #include <opencv2/opencv.hpp>
 
 cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
