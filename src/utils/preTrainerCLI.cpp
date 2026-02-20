@@ -1,9 +1,9 @@
 /*
-  Claire Liu, Yu-Jing Wei
-  preTrainerCLI.cpp
+Claire Liu, Yu-Jing Wei
+preTrainerCLI.cpp
 
-  Path: src/utils/preTrainerCLI.cpp
-  Description: Command line interface for the pre-trainer.
+Path: src/utils/preTrainerCLI.cpp
+Description: Command line interface for the pre-trainer.
 */
 
 #include "extractorFactory.hpp"

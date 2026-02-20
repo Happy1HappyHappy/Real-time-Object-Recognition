@@ -48,38 +48,54 @@ LDLIBS = \
 BINDIR = ./bin
 SRCDIR = ./src
 OBJDIR = ./obj
+DATADIR = ./data
 UTILSDIR = ./src/utils
 
+# --- directory targets ---
+$(OBJDIR):
+	mkdir -p $@
 
-# Prerequisites / Dependencies
-$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+$(BINDIR):
+	mkdir -p $@
+
+$(DATADIR):
+	mkdir -p $@
+
+# --- build object files (order-only: ensure obj dir exists) ---
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: $(SRCDIR)/offline/%.cpp
+$(OBJDIR)/%.o: $(SRCDIR)/offline/%.cpp | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: $(SRCDIR)/online/%.cpp
+$(OBJDIR)/%.o: $(SRCDIR)/online/%.cpp | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: $(UTILSDIR)/%.cpp
+$(OBJDIR)/%.o: $(UTILSDIR)/%.cpp | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Targets
-all: fg matcher
+# --- targets ---
+all: pretrain rtor
 
 COMMON_OBJS = $(OBJDIR)/csvUtil.o \
-			  ${OBJDIR}/filters.o \
-              $(OBJDIR)/readFiles.o \
 			  $(OBJDIR)/extractorFactory.o \
 			  $(OBJDIR)/extractor.o \
+			  ${OBJDIR}/filters.o \
+			  $(OBJDIR)/preProcessor.o \
+              $(OBJDIR)/readFiles.o \
+			  $(OBJDIR)/regionDetect.o \
 
 pretrain: $(OBJDIR)/preTrainer.o \
-		 $(OBJDIR)/preTrainerCLI.o \
-         $(COMMON_OBJS)
-	mkdir -p $(OBJDIR)
-	mkdir -p $(BINDIR)
-	$(CC) $^ -o $(BINDIR)/$@ $(LDFLAGS) $(LDLIBS)
+          $(OBJDIR)/preTrainerCLI.o \
+          $(COMMON_OBJS) \
+		  | $(BINDIR) $(DATADIR)
+	$(CXX) $^ -o $(BINDIR)/$@ $(LDFLAGS) $(LDLIBS)
 
+rtor: $(OBJDIR)/RTObjectRecognitionApp.o \
+	  $(OBJDIR)/main.o \
+      $(COMMON_OBJS) \
+      | $(BINDIR) $(DATADIR)
+	$(CXX) $^ -o $(BINDIR)/$@ $(LDFLAGS) $(LDLIBS)
 
 clean:
 	rm -rf obj/*.o bin/* *~ 

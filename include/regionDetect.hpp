@@ -11,15 +11,13 @@ Description: Region detection utilities (grassfire / connected components).
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-class RegionDetect {
+class RegionDetect
+{
 public:
-
     RegionDetect();
     ~RegionDetect();
-    void grassfire(cv::Mat &binaryImage, cv::Mat &regionMap);
-    void twoSegmentation(cv::Mat &binaryImage, cv::Mat &regionMap);
+    static void grassfire(cv::Mat &binaryImage, cv::Mat &regionMap);
+    static void twoSegmentation(cv::Mat &binaryImage, cv::Mat &regionMap);
 
 private:
-
 };
-

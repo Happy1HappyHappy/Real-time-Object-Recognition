@@ -8,6 +8,7 @@
 
 #include "extractor.hpp"
 #include "filters.hpp"
+#include "preProcessor.hpp"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -19,6 +20,12 @@ int BaselineExtractor::extractMat(
     const cv::Mat &image,
     std::vector<float> *featureVector) const
 {
+    // TODO:
+    // Pre-process the frame and get the region of interest (ROI)
+    PreProcessor::process(image);
+    // Extract feature vector from the ROI using the baseline extractor
+
+    // For demonstration, we will just return a dummy feature vector of size 512 with all values set to 0.5
     featureVector->assign(100, 0.5f);
     return 0; // Success
 }
@@ -27,9 +34,9 @@ int CNNExtractor::extractMat(
     const cv::Mat &image,
     std::vector<float> *featureVector) const
 {
-    // Placeholder implementation for CNN feature extraction
-    // In a real implementation, this would involve loading a pre-trained CNN model
-    // and running the image through the model to get the feature vector.
+    // TODO:
+    // Pre-process the frame and get the region of interest (ROI)
+    // Extract feature vector from the ROI using the CNN extractor
 
     // For demonstration, we will just return a dummy feature vector of size 512 with all values set to 0.5
     featureVector->assign(512, 0.5f);
@@ -40,9 +47,9 @@ int EigenspaceExtractor::extractMat(
     const cv::Mat &image,
     std::vector<float> *featureVector) const
 {
-    // Placeholder implementation for eigenspace feature extraction
-    // In a real implementation, this would involve projecting the image onto a pre-computed eigenspace
-    // and returning the resulting feature vector.
+    // TODO:
+    // Pre-process the frame and get the region of interest (ROI)
+    // Extract feature vector from the ROI using the eigenspace extractor
 
     // For demonstration, we will just return a dummy feature vector of size 100 with all values set to 0.5
     featureVector->assign(100, 0.5f);

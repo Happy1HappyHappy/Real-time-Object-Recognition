@@ -6,6 +6,7 @@
   Description: Header file for preTrainerCLI.cpp to parse command-line
                 arguments for pre-training.
 */
+#pragma once // Include guard
 
 #include <getopt.h>
 #include <string>
