@@ -8,6 +8,7 @@
 
 #include "preProcessor.hpp"
 #include "regionDetect.hpp"
+#include "thresholding.hpp"
 #include <opencv2/opencv.hpp>
 
 cv::Mat PreProcessor::process(const cv::Mat &input)
@@ -17,11 +18,12 @@ cv::Mat PreProcessor::process(const cv::Mat &input)
     cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
 
     cv::Mat binary;
-    cv::threshold(gray, binary,
-                  128, // threshold value
-                  255, // max value
-                  cv::THRESH_BINARY);
-    cv::Mat output = input.clone();
+
+    // temp for grassfire output
+    cv::Mat output;
+    
+
+    Threadsholding::dynamicThreadsHold(gray, binary);
 
     // Region detection using grassfire algorithm
     RegionDetect::grassfire(binary, output);
