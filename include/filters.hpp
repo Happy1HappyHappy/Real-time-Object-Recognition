@@ -2,7 +2,7 @@
 Claire Liu, Yu-Jing Wei
 Filters.hpp
 
-Path: project1/include/utils/Filters.hpp
+Path: include/utils/Filters.hpp
 Description: Declares image filtering functions (e.g., greyscale, blur, etc.).
 */
 
@@ -27,7 +27,6 @@ public:
     static int sobelX3x3(cv::Mat &src, cv::Mat &dst);
     static int sobelY3x3(cv::Mat &src, cv::Mat &dst);
     static int magnitude(cv::Mat &sx, cv::Mat &sy, cv::Mat &dst);
-    static int faceDetect(cv::Mat &src, cv::Mat &dst, cv::Rect &last);
     static int CIELab(cv::Mat &src, cv::Mat &dst);
     static int gabor(cv::Mat &src, cv::Mat &dst);
     static int convolve(cv::Mat &src, cv::Mat &dst, int *kernel1, int *kernel2, int kSize, int kSum);

@@ -144,6 +144,11 @@ int csvUtil::append_image_data_csv(const char *filename, const char *image_filen
     exit(-1);
   }
 
+  // get the label from the image filename and write it to the first column of the CSV file
+  std::string label = csvUtil::getLabel(image_filename);
+  std::fwrite(label.c_str(), sizeof(char), label.size(), fp);
+  std::fwrite(",", sizeof(char), 1, fp);
+
   // write the filename and the feature vector to the CSV file
   strcpy(buffer, image_filename);
   std::fwrite(buffer, sizeof(char), strlen(buffer), fp);
@@ -265,4 +270,46 @@ int csvUtil::fileExists(const char *filename)
     return 1;
   }
   return 0;
+}
+
+/*
+  Extracts the label from a given filename by removing the directory path,
+  file extension, and any suffix after an underscore.
+  @param filename The path to the file.
+  @return The extracted label as a string.
+*/
+std::string csvUtil::getLabel(const std::string &filename)
+{
+  // Remove directory path
+  auto slash = filename.find_last_of("/\\");
+  std::string base = (slash == std::string::npos) ? filename : filename.substr(slash + 1);
+
+  // Remove file extension
+  auto dot = base.find_last_of('.');
+  std::string stem = (dot == std::string::npos) ? base : base.substr(0, dot);
+
+  // Get label by removing any suffix after an underscore
+  auto us = stem.find('_');
+  return (us == std::string::npos) ? stem : stem.substr(0, us);
+}
+
+/*
+Sets the output filename based on the base path and extractor type.
+@param basePath The base path for the output file.
+@param extractorType The type of extractor used.
+@return The constructed output filename as a string.
+*/
+std::string csvUtil::setOutputFilename(const std::string &basePath, const ExtractorType &extractorType)
+{
+  std::string outPath = basePath;
+  std::string extractorName = ExtractorFactory::extractorTypeToString(extractorType);
+  // append feature name and position to the output file path
+  if (outPath.size() >= 4 && outPath.substr(outPath.size() - 4) == ".csv")
+    outPath = outPath.substr(0, outPath.size() - 4) + "_" + extractorName +
+              "_" + ".csv";
+  else
+    outPath = outPath + "_" + extractorName + "_" + ".csv";
+  printf("Using feature type %s\n", extractorName.c_str());
+  printf("Output will be saved to %s\n", outPath.c_str());
+  return outPath;
 }
