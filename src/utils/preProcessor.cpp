@@ -10,30 +10,14 @@
 #include "extractor.hpp"
 #include "distanceTransform.hpp"
 #include "regionDetect.hpp"
+#include "thresholding.hpp"
+#include "morphologicalFilter.hpp"
 #include <opencv2/opencv.hpp>
+
 
 cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
 {
-<<<<<<< Updated upstream
-  // Thresholding to get a binary image
-  cv::Mat gray;
-  cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
-
-  cv::Mat binary;
-  cv::threshold(gray, binary,
-                128, // threshold value
-                255, // max value
-                cv::THRESH_BINARY);
-  cv::Mat processedImg = input.clone();
-
-  // Morphological operations to clean up the binary image
-
-  // Connected components using grassfire algorithm
-  RegionDetect::grassfire(binary, processedImg);
-
-  // Region segmentation using two-pass segmentation algorithm
-=======
-  MorphologicalFilter myFilter;
+   MorphologicalFilter myFilter;
 
   // cv thresholding to get a binary image
   cv::Mat gray;
@@ -67,7 +51,6 @@ cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
   cv::normalize(region, regionVis, 0, 255, cv::NORM_MINMAX, CV_8U);
   cv::imshow("4. Region Map", regionVis);
   cv::waitKey(0);
->>>>>>> Stashed changes
 
   // Region Analysis to filter out small regions and get the region of interest (ROI)
   // Assign the ROI to the output parameter for use in feature extraction

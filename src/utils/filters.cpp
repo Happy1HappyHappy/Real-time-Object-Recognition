@@ -122,6 +122,29 @@ int Filters::magnitude(cv::Mat &sx, cv::Mat &sy, cv::Mat &dst)
     return 0;
 }
 
+/*
+Applies a 5x5 Gaussian Blur filter to the source image.
+- @param src The source image.
+- @param dst The destination image where the result will be stored.
+- @return 0 on success, -1 on failure.
+*/
+int Filters::gaussianBlur5x5(cv::Mat &src, cv::Mat &dst)
+{
+    if (src.empty())
+        return -1;
+
+    // 1D Gaussian kernel for a 5x5 separable filter
+    int kernel[5] = {1, 2, 4, 2, 1};
+    
+    // Convolve with separable kernel, kSum is 10 (1+2+4+2+1)
+    Filters::convolve(src, dst, kernel, kernel, 5, 10);
+    
+    // convolve outputs CV_16S, convert back to absolute values and 8U type
+    cv::convertScaleAbs(dst, dst);
+
+    return 0;
+}
+
 int Filters::CIELab(cv::Mat &src, cv::Mat &dst)
 {
     // This function converts an image from BGR to CIELab color space
