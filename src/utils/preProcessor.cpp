@@ -31,6 +31,9 @@ cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
   // Region segmentation using two-pass segmentation algorithm
 
   // Region Analysis to filter out small regions and get the region of interest (ROI)
+  // Assign the ROI to the output parameter for use in feature extraction
 
-  return processedImg; // Return processed ROI
+  // output = RegionDetect::getROI(processedImg);
+
+  return processedImg; // Return image with detected regions for display/testing(bounding boxes, etc.)
 }

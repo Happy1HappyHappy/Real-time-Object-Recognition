@@ -13,5 +13,5 @@
 class PreProcessor
 {
 public:
-    static cv::Mat process(const cv::Mat &input, cv::Mat &roi);
+    static cv::Mat process(const cv::Mat &input, cv::Mat &output);
 };
