@@ -34,6 +34,12 @@ void RegionDetect::grassfire(cv::Mat &src, cv::Mat &regionMap)
         }
     }
 
+    // show result, can skip
+    // cv::Mat vis;
+    // vis = 255 * regionMap / maxVal;
+    // cv::imshow("pass1_top-down", vis);
+    // cv::waitKey(0);
+
     // bottom-up
     for (int i = src.rows - 2; i > 0; i--)
     {
@@ -59,6 +65,11 @@ void RegionDetect::grassfire(cv::Mat &src, cv::Mat &regionMap)
             }
         }
     }
+
+    // show result, can skip
+    // vis = 255 * regionMap / maxVal;
+    // cv::imshow("pass2_final", vis);
+    // cv::waitKey(0);
 }
 
 void RegionDetect::twoSegmentation(cv::Mat &src, cv::Mat &regionMap)

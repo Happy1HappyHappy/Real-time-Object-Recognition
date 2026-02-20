@@ -15,8 +15,10 @@ Description: Real-time object recognition using feature matching.
 #include <cctype>     // std::isalnum
 #include <filesystem> // std::filesystem
 #include <opencv2/opencv.hpp>
+#include "extractorFactory.hpp"
+#include "IExtractor.hpp"
+#include "preProcessor.hpp"
 #include "RTObjectRecognitionApp.hpp"
-
 /*
 RTObjectRecognitionApp class to handle real-time object recognition using feature matching.
 */
@@ -46,29 +48,50 @@ int RTObjectRecognitionApp::run()
                   (int)capdev.get(cv::CAP_PROP_FRAME_HEIGHT));
     std::cout << "Expected size: " << refS.width << " " << refS.height << "\n";
 
+    // create the extractor based on the specified type
+    auto baselineExtractor = ExtractorFactory::create(ExtractorType::BASELINE);
+    auto cnnExtractor = ExtractorFactory::create(ExtractorType::CNN);
+    auto eigenspaceExtractor = ExtractorFactory::create(ExtractorType::EIGENSPACE);
+
     for (;;)
     {
         capdev >> frame;
         if (frame.empty())
             break;
 
-        cv::Mat currentFrame = frame;
-
         // TODO:
         // Pre-process the frame and get the region of interest (ROI)
+        cv::Mat currentFrame = frame.clone();
+        cv::Mat roi;
+        cv::Mat processedImg = PreProcessor::process(currentFrame, roi);
 
-        // apply feature extractors if they are on
+        currentFrame = processedImg; // for display testing
+
+        // apply feature extractors if they are ON, and handle any errors
+        std::vector<float> featureVector;
         if (st.baselineOn)
         {
-            // currentFrame = applyBaseline(currentFrame);
+            featureVector.clear(); // clear the feature vector for each image
+            if (baselineExtractor->extractMat(roi, &featureVector) != 0)
+                std::cerr << "Baseline extractor failed on current frame.\n";
+            // use distance metrics to get closest featureVector
+            // draw bounding box and label of the closest match on the current frame
         }
         if (st.cnnOn)
         {
-            // currentFrame = applyCNN(currentFrame);
+            featureVector.clear(); // clear the feature vector for each image
+            if (cnnExtractor->extractMat(roi, &featureVector) != 0)
+                std::cerr << "CNN extractor failed on current frame.\n";
+            // use distance metrics to get closest featureVector
+            // draw bounding box and label of the closest match on the current frame
         }
         if (st.eigenspaceOn)
         {
-            // currentFrame = applyEigenspace(currentFrame);
+            featureVector.clear(); // clear the feature vector for each image
+            if (eigenspaceExtractor->extractMat(roi, &featureVector) != 0)
+                std::cerr << "Eigenspace extractor failed on current frame.\n";
+            // use distance metrics to get closest featureVector
+            // draw bounding box and label of the closest match on the current frame
         }
 
         // if recordingOn, write the current frame to the video file
