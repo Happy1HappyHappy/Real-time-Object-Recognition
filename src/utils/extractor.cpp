@@ -22,7 +22,9 @@ int BaselineExtractor::extractMat(
 {
     // TODO:
     // Pre-process the frame and get the region of interest (ROI)
-    PreProcessor::process(image);
+
+    // Bounding box of the ROI on the current frame
+
     // Extract feature vector from the ROI using the baseline extractor
 
     // For demonstration, we will just return a dummy feature vector of size 512 with all values set to 0.5
@@ -36,6 +38,9 @@ int CNNExtractor::extractMat(
 {
     // TODO:
     // Pre-process the frame and get the region of interest (ROI)
+
+    // Bounding box of the ROI on the current frame
+
     // Extract feature vector from the ROI using the CNN extractor
 
     // For demonstration, we will just return a dummy feature vector of size 512 with all values set to 0.5
@@ -49,6 +54,9 @@ int EigenspaceExtractor::extractMat(
 {
     // TODO:
     // Pre-process the frame and get the region of interest (ROI)
+
+    // Bounding box of the ROI on the current frame
+
     // Extract feature vector from the ROI using the eigenspace extractor
 
     // For demonstration, we will just return a dummy feature vector of size 100 with all values set to 0.5

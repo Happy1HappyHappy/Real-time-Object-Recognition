@@ -10,21 +10,27 @@
 #include "regionDetect.hpp"
 #include <opencv2/opencv.hpp>
 
-cv::Mat PreProcessor::process(const cv::Mat &input)
+cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
 {
-    // cv thresholding to get a binary image
-    cv::Mat gray;
-    cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+  // Thresholding to get a binary image
+  cv::Mat gray;
+  cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
 
-    cv::Mat binary;
-    cv::threshold(gray, binary,
-                  128, // threshold value
-                  255, // max value
-                  cv::THRESH_BINARY);
-    cv::Mat output = input.clone();
+  cv::Mat binary;
+  cv::threshold(gray, binary,
+                128, // threshold value
+                255, // max value
+                cv::THRESH_BINARY);
+  cv::Mat processedImg = input.clone();
 
-    // Region detection using grassfire algorithm
-    RegionDetect::grassfire(binary, output);
+  // Morphological operations to clean up the binary image
 
-    return output;
+  // Connected components using grassfire algorithm
+  RegionDetect::grassfire(binary, processedImg);
+
+  // Region segmentation using two-pass segmentation algorithm
+
+  // Region Analysis to filter out small regions and get the region of interest (ROI)
+
+  return processedImg; // Return processed ROI
 }
