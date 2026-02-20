@@ -11,7 +11,7 @@
 #define CVS_UTIL_H
 
 #include <vector>
-
+#include "extractorFactory.hpp"
 class csvUtil
 {
 public:
@@ -61,5 +61,21 @@ public:
   @return 1 if the file exists, 0 otherwise.
   */
   static int fileExists(const char *filename);
+
+  /*
+  Extracts the label from a given filename by removing the directory path,
+  file extension, and any suffix after an underscore.
+  @param filename The path to the file.
+  @return The extracted label as a string.
+  */
+  static std::string getLabel(const std::string &filename);
+
+  /*
+  Sets the output filename based on the base path and extractor type.
+  @param basePath The base path for the output file.
+  @param extractorType The type of extractor used.
+  @return The constructed output filename as a string.
+  */
+  static std::string setOutputFilename(const std::string &basePath, const ExtractorType &extractorType);
 };
 #endif

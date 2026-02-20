@@ -39,6 +39,7 @@ int ReadFiles::readFilesInDir(char *dirname, std::vector<std::string> &files)
         printf("Cannot open directory %s\n", dirname);
         exit(-1);
     }
+    printf("Processing directory %s\n", dirname);
 
     // loop over all the files in the image file listing
     while ((dp = readdir(dirp)) != NULL)

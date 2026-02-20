@@ -7,7 +7,6 @@ Description: Filters implementation file defining image filtering functions.
 */
 
 #include "filters.hpp"
-#include "faceDetect.hpp"
 #include <opencv2/opencv.hpp>
 
 /*
@@ -119,59 +118,6 @@ int Filters::magnitude(cv::Mat &sx, cv::Mat &sy, cv::Mat &dst)
             }
         }
     }
-
-    return 0;
-}
-
-/*
-Detects faces in the source image and draws rectangles around them in the destination image.
-- @param src The source image.
-- @param dst The destination image where the result will be stored.
-- @param last The last detected face rectangle for smoothing.
-- @return 0 on success, -1 on failure (e.g., if the source image is empty).
-*/
-int Filters::faceDetect(cv::Mat &src, cv::Mat &dst, cv::Rect &last)
-{
-    // This function detects faces in the source image and draws rectangles around them in the destination image
-    // src: source image
-    // dst: destination image
-
-    // check for empty source images
-    if (src.empty())
-        return -1;
-
-    // copy src to dst
-    src.copyTo(dst);
-
-    std::vector<cv::Rect> faces;                 // vector to hold detected faces
-    cv::Mat grey;                                // grayscale image
-    cv::cvtColor(src, grey, cv::COLOR_BGR2GRAY); // convert to greyscale
-
-    // detect faces
-    detectFaces(grey, faces);
-
-    // add a little smoothing by averaging the last two detections
-    if (faces.size() > 0)
-    {
-        if (last.area() == 0)
-        {
-            last = faces[0]; // initialize last if it's the first detection
-        }
-        else
-        {
-            // smooth by averaging with last
-            last.x = (faces[0].x + last.x) / 2;
-            last.y = (faces[0].y + last.y) / 2;
-            last.width = (faces[0].width + last.width) / 2;
-            last.height = (faces[0].height + last.height) / 2;
-        }
-    }
-    // draw boxes around the faces
-    drawBoxes(dst, faces, 0, 1.0);
-
-    // check if dst is empty
-    if (dst.empty())
-        return -1;
 
     return 0;
 }
