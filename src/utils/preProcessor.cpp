@@ -11,22 +11,30 @@
 #include "thresholding.hpp"
 #include <opencv2/opencv.hpp>
 
-cv::Mat PreProcessor::process(const cv::Mat &input)
+cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
 {
-    // cv thresholding to get a binary image
-    cv::Mat gray;
-    cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+  // Thresholding to get a binary image
+  cv::Mat gray;
+  cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
 
-    cv::Mat binary;
+  cv::Mat binary;
+  cv::threshold(gray, binary,
+                128, // threshold value
+                255, // max value
+                cv::THRESH_BINARY);
+  cv::Mat processedImg = input.clone();
 
-    // temp for grassfire output
-    cv::Mat output;
-    
+  // Morphological operations to clean up the binary image
 
-    Threadsholding::dynamicThreadsHold(gray, binary);
+  // Connected components using grassfire algorithm
+  RegionDetect::grassfire(binary, processedImg);
 
-    // Region detection using grassfire algorithm
-    RegionDetect::grassfire(binary, output);
+  // Region segmentation using two-pass segmentation algorithm
 
-    return output;
+  // Region Analysis to filter out small regions and get the region of interest (ROI)
+  // Assign the ROI to the output parameter for use in feature extraction
+
+  // output = RegionDetect::getROI(processedImg);
+
+  return processedImg; // Return image with detected regions for display/testing(bounding boxes, etc.)
 }
