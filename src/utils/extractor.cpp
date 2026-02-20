@@ -2,7 +2,7 @@
   Claire Liu, Yu-Jing Wei
   extractor.cpp
 
-  Path: project2/src/utils/extractor.cpp
+  Path: src/utils/extractor.cpp
   Description: Extracts features from images.
 */
 
