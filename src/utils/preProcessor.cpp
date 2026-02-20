@@ -52,5 +52,10 @@ cv::Mat PreProcessor::process(const cv::Mat &input)
     cv::imshow("4. Region Map", regionVis);
     cv::waitKey(0);
 
-    return output;
+  // Region Analysis to filter out small regions and get the region of interest (ROI)
+  // Assign the ROI to the output parameter for use in feature extraction
+
+  // output = RegionDetect::getROI(processedImg);
+
+  return processedImg; // Return image with detected regions for display/testing(bounding boxes, etc.)
 }

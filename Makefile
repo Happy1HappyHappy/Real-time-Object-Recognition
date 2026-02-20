@@ -94,7 +94,11 @@ pretrain: $(OBJDIR)/preTrainer.o \
 	$(CXX) $^ -o $(BINDIR)/$@ $(LDFLAGS) $(LDLIBS)
 
 rtor: $(OBJDIR)/RTObjectRecognitionApp.o \
+	  $(OBJDIR)/distanceMetrics.o \
+	  $(OBJDIR)/featureMatcher.o \
 	  $(OBJDIR)/main.o \
+	  $(OBJDIR)/matchUtil.o \
+	  $(OBJDIR)/metricFactory.o \
       $(COMMON_OBJS) \
       | $(BINDIR) $(DATADIR)
 	$(CXX) $^ -o $(BINDIR)/$@ $(LDFLAGS) $(LDLIBS)
