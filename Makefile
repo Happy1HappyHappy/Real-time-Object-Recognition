@@ -84,6 +84,8 @@ COMMON_OBJS = $(OBJDIR)/csvUtil.o \
 			  $(OBJDIR)/preProcessor.o \
               $(OBJDIR)/readFiles.o \
 			  $(OBJDIR)/regionDetect.o \
+			  $(OBJDIR)/thresholding.o \
+			  $(OBJDIR)/morphologicalFilter.o
 
 pretrain: $(OBJDIR)/preTrainer.o \
           $(OBJDIR)/preTrainerCLI.o \
