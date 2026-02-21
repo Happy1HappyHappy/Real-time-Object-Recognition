@@ -1,3 +1,6 @@
+# make without explicit target should build executables
+.DEFAULT_GOAL := all
+
 # OSX compiler
 #CC = clang++
 
@@ -83,6 +86,7 @@ COMMON_OBJS = $(OBJDIR)/csvUtil.o \
 			  $(OBJDIR)/distanceTransform.o \
 			  ${OBJDIR}/filters.o \
 			  $(OBJDIR)/preProcessor.o \
+			  $(OBJDIR)/regionAnalyzer.o \
               $(OBJDIR)/readFiles.o \
 			  $(OBJDIR)/regionDetect.o \
 			  $(OBJDIR)/thresholding.o \

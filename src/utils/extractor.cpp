@@ -9,6 +9,7 @@
 #include "extractor.hpp"
 #include "filters.hpp"
 #include "preProcessor.hpp"
+#include "regionAnalyzer.hpp"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -25,7 +26,6 @@ int BaselineExtractor::extractMat(
     cv::Mat roi;
     PreProcessor::process(image, roi);
     // Bounding box of the ROI on the current frame
-
     // Extract feature vector from the ROI using the baseline extractor
 
     // For demonstration, we will just return a dummy feature vector of size 512 with all values set to 0.5
