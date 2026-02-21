@@ -11,12 +11,14 @@ Description: Header file for featureMatcher.cpp to
 
 #include "extractorFactory.hpp"
 #include "metricFactory.hpp"
+#include "matchResult.hpp"
 
 class FeatureMatcher
 {
 public:
-    static int match(
-        std::vector<float> targetFeatures,
-        std::string dbPath,
-        MetricType metricType);
+    static bool match(
+        const std::vector<float> &targetFeatures,
+        const std::string &dbPath,
+        MetricType metricType,
+        MatchResult &bestMatch);
 };
