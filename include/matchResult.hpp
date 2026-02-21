@@ -20,7 +20,9 @@ operation between a query image and a database image. It contains:
 */
 struct MatchResult
 {
-    // The filename of the matched image
+    // Label from the first column in CSV.
+    std::string label;
+    // Backward-compatible alias (currently same as label).
     std::string filename;
     // The distance value representing the similarity between the query image and the matched image
     float distance;

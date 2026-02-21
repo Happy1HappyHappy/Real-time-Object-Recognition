@@ -27,11 +27,11 @@ std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType 
     switch (type)
     {
     case BASELINE:
-        return (st.dataDir / "features_baseline_.csv").string();
+        return (st.dataDir / "features_baseline.csv").string();
     case CNN:
-        return (st.dataDir / "features_cnn_.csv").string();
+        return (st.dataDir / "features_cnn.csv").string();
     case EIGENSPACE:
-        return (st.dataDir / "features_eigenspace_.csv").string();
+        return (st.dataDir / "features_eigenspace.csv").string();
     default:
         return "";
     }
@@ -93,16 +93,31 @@ int RTObjectRecognitionApp::run()
     const std::string baselineDbPath = dbPathFor(st, BASELINE);
     const std::string cnnDbPath = dbPathFor(st, CNN);
     const std::string eigenspaceDbPath = dbPathFor(st, EIGENSPACE);
+    size_t frameId = 0;
 
     for (;;)
     {
         capdev >> frame;
         if (frame.empty())
             break;
+        ++frameId;
+        std::cout << "[FRAME " << frameId << "] captured\n";
 
         cv::Mat currentFrame = frame.clone();
         st.lastDetection = PreProcessor::detect(currentFrame);
         currentFrame = st.lastDetection.debugFrame.clone();
+        if (st.lastDetection.valid)
+        {
+            std::cout << "[DETECT] valid bbox=("
+                      << st.lastDetection.bestBBox.x << ","
+                      << st.lastDetection.bestBBox.y << ","
+                      << st.lastDetection.bestBBox.width << ","
+                      << st.lastDetection.bestBBox.height << ")\n";
+        }
+        else
+        {
+            std::cout << "[DETECT] no valid region\n";
+        }
 
         st.hasPrediction = false;
         st.predExtractor = "none";
@@ -113,42 +128,80 @@ int RTObjectRecognitionApp::run()
         MatchResult matchResult;
         if (st.baselineOn && st.lastDetection.valid)
         {
+            std::cout << "[CLASSIFY] mode=baseline\n";
             featureVector.clear();
-            if (baselineExtractor->extractMat(st.lastDetection.embImage, &featureVector) != 0)
+            const bool extractOk = (baselineExtractor->extractMat(st.lastDetection.embImage, &featureVector) == 0);
+            if (!extractOk)
+            {
                 std::cerr << "Baseline extractor failed on current frame.\n";
-            else if (FeatureMatcher::match(featureVector, baselineDbPath, MetricType::SSD, matchResult))
+            }
+            std::cout << "[FEATURE] dim=" << featureVector.size() << " db=" << baselineDbPath << "\n";
+            if (extractOk && FeatureMatcher::match(featureVector, baselineDbPath, MetricType::SSD, matchResult))
             {
                 st.hasPrediction = true;
                 st.predExtractor = "baseline";
-                st.predLabel = matchResult.filename;
+                st.predLabel = matchResult.label;
                 st.predDistance = matchResult.distance;
+                std::cout << "[PRED] " << st.predLabel << " dist=" << st.predDistance << "\n";
+            }
+            else
+            {
+                std::cout << "[PRED] no match (baseline)\n";
             }
         }
         else if (st.cnnOn && st.lastDetection.valid)
         {
+            std::cout << "[CLASSIFY] mode=cnn\n";
             featureVector.clear();
-            if (cnnExtractor->extractMat(st.lastDetection.embImage, &featureVector) != 0)
+            const bool extractOk = (cnnExtractor->extractMat(st.lastDetection.embImage, &featureVector) == 0);
+            if (!extractOk)
+            {
                 std::cerr << "CNN extractor failed on current frame.\n";
-            else if (FeatureMatcher::match(featureVector, cnnDbPath, MetricType::COSINE, matchResult))
+            }
+            std::cout << "[FEATURE] dim=" << featureVector.size() << " db=" << cnnDbPath << "\n";
+            if (extractOk && FeatureMatcher::match(featureVector, cnnDbPath, MetricType::COSINE, matchResult))
             {
                 st.hasPrediction = true;
                 st.predExtractor = "cnn";
-                st.predLabel = matchResult.filename;
+                st.predLabel = matchResult.label;
                 st.predDistance = matchResult.distance;
+                std::cout << "[PRED] " << st.predLabel << " dist=" << st.predDistance << "\n";
+            }
+            else
+            {
+                std::cout << "[PRED] no match (cnn)\n";
             }
         }
         else if (st.eigenspaceOn && st.lastDetection.valid)
         {
+            std::cout << "[CLASSIFY] mode=eigenspace\n";
             featureVector.clear();
-            if (eigenspaceExtractor->extractMat(st.lastDetection.embImage, &featureVector) != 0)
+            const bool extractOk = (eigenspaceExtractor->extractMat(st.lastDetection.embImage, &featureVector) == 0);
+            if (!extractOk)
+            {
                 std::cerr << "Eigenspace extractor failed on current frame.\n";
-            else if (FeatureMatcher::match(featureVector, eigenspaceDbPath, MetricType::COSINE, matchResult))
+            }
+            std::cout << "[FEATURE] dim=" << featureVector.size() << " db=" << eigenspaceDbPath << "\n";
+            if (extractOk && FeatureMatcher::match(featureVector, eigenspaceDbPath, MetricType::COSINE, matchResult))
             {
                 st.hasPrediction = true;
                 st.predExtractor = "eigenspace";
-                st.predLabel = matchResult.filename;
+                st.predLabel = matchResult.label;
                 st.predDistance = matchResult.distance;
+                std::cout << "[PRED] " << st.predLabel << " dist=" << st.predDistance << "\n";
             }
+            else
+            {
+                std::cout << "[PRED] no match (eigenspace)\n";
+            }
+        }
+        else if (st.baselineOn || st.cnnOn || st.eigenspaceOn)
+        {
+            std::cout << "[CLASSIFY] skipped (no valid detection)\n";
+        }
+        else
+        {
+            std::cout << "[CLASSIFY] skipped (no mode enabled)\n";
         }
 
         // if recordingOn, write the current frame to the video file
@@ -232,10 +285,56 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
     if (st.hasPrediction)
     {
         std::ostringstream oss;
-        oss << "Pred[" << st.predExtractor << "]: " << st.predLabel
+        oss << "Label: " << st.predLabel
             << "  dist=" << std::fixed << std::setprecision(4) << st.predDistance;
         cv::putText(display, oss.str(),
                     {20, 140}, cv::FONT_HERSHEY_DUPLEX, 0.6, {0, 255, 255}, 2, cv::LINE_AA);
+
+        if (st.lastDetection.valid)
+        {
+            const cv::Rect box = st.lastDetection.bestBBox & cv::Rect(0, 0, display.cols, display.rows);
+            if (box.width > 0 && box.height > 0)
+            {
+                const std::string boxText = "Predicted Classification: " + st.predLabel;
+                int baseline = 0;
+                const cv::Size textSize = cv::getTextSize(boxText, cv::FONT_HERSHEY_SIMPLEX, 0.55, 2, &baseline);
+                int tx = box.x;
+                int ty = box.y - 8;
+                if (ty - textSize.height < 0)
+                {
+                    ty = box.y + textSize.height + 8;
+                }
+                tx = std::max(0, std::min(tx, display.cols - textSize.width - 6));
+
+                const cv::Rect bg(tx - 3, ty - textSize.height - 3,
+                                  textSize.width + 6, textSize.height + baseline + 6);
+                cv::rectangle(display, bg, cv::Scalar(0, 0, 0), cv::FILLED);
+                cv::putText(display, boxText, cv::Point(tx, ty),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(0, 255, 255), 2, cv::LINE_AA);
+            }
+        }
+    }
+    else if (st.lastDetection.valid && (st.baselineOn || st.cnnOn || st.eigenspaceOn))
+    {
+        const cv::Rect box = st.lastDetection.bestBBox & cv::Rect(0, 0, display.cols, display.rows);
+        if (box.width > 0 && box.height > 0)
+        {
+            const std::string boxText = "NO MATCH";
+            int baseline = 0;
+            const cv::Size textSize = cv::getTextSize(boxText, cv::FONT_HERSHEY_SIMPLEX, 0.55, 2, &baseline);
+            int tx = box.x;
+            int ty = box.y - 8;
+            if (ty - textSize.height < 0)
+            {
+                ty = box.y + textSize.height + 8;
+            }
+            tx = std::max(0, std::min(tx, display.cols - textSize.width - 6));
+            const cv::Rect bg(tx - 3, ty - textSize.height - 3,
+                              textSize.width + 6, textSize.height + baseline + 6);
+            cv::rectangle(display, bg, cv::Scalar(0, 0, 0), cv::FILLED);
+            cv::putText(display, boxText, cv::Point(tx, ty),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(0, 180, 255), 2, cv::LINE_AA);
+        }
     }
 
     if (st.recordingOn)

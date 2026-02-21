@@ -15,6 +15,8 @@ vectors.
 #include <algorithm>
 #include <cstdio>
 #include <cmath>
+#include <limits>
+#include <iostream>
 #include <vector>
 
 bool FeatureMatcher::match(
@@ -27,20 +29,84 @@ bool FeatureMatcher::match(
     std::vector<std::vector<float>> dbData;
     if (ReadFiles::readFeaturesFromCSV(dbPath.c_str(), dbLabels, dbData) != 0 || dbData.empty())
     {
+        std::cout << "[MATCH] DB load failed/empty: " << dbPath << "\n";
         return false;
     }
 
     auto distanceMetric = MetricFactory::create(metricType);
     if (!distanceMetric)
     {
+        std::cout << "[MATCH] invalid metric for DB: " << dbPath << "\n";
         return false;
     }
 
+    // Baseline uses scaled Euclidean distance:
+    // d(x,y)=sqrt(sum_i ((x_i-y_i)^2 / sigma_i^2)),
+    // where sigma_i is std-dev of dimension i over DB.
+    std::vector<double> invStd;
+    if (metricType == MetricType::SSD)
+    {
+        const size_t dim = targetFeatures.size();
+        if (dim == 0)
+        {
+            std::cout << "[MATCH] empty target feature vector\n";
+            return false;
+        }
+        invStd.assign(dim, 1.0);
+
+        std::vector<double> mean(dim, 0.0);
+        std::vector<double> sqMean(dim, 0.0);
+        size_t usedRows = 0;
+        for (const auto &row : dbData)
+        {
+            if (row.size() != dim)
+                continue;
+            ++usedRows;
+            for (size_t i = 0; i < dim; ++i)
+            {
+                const double v = row[i];
+                mean[i] += v;
+                sqMean[i] += v * v;
+            }
+        }
+        if (usedRows == 0)
+        {
+            std::cout << "[MATCH] no compatible DB rows (dimension mismatch)\n";
+            return false;
+        }
+        for (size_t i = 0; i < dim; ++i)
+        {
+            mean[i] /= static_cast<double>(usedRows);
+            sqMean[i] /= static_cast<double>(usedRows);
+            const double var = std::max(0.0, sqMean[i] - mean[i] * mean[i]);
+            const double sigma = std::sqrt(var);
+            // Avoid exploding weights on nearly-constant dimensions.
+            invStd[i] = (sigma > 1e-6) ? (1.0 / sigma) : 1.0;
+        }
+    }
+
     bool found = false;
-    MatchResult best{"", 0.0f};
+    MatchResult best{"", "", 0.0f};
     for (size_t i = 0; i < dbData.size(); ++i)
     {
-        const float distance = distanceMetric->compute(targetFeatures, dbData[i]);
+        float distance = std::numeric_limits<float>::infinity();
+        if (metricType == MetricType::SSD)
+        {
+            if (dbData[i].size() != targetFeatures.size())
+                continue;
+            double acc = 0.0;
+            for (size_t k = 0; k < targetFeatures.size(); ++k)
+            {
+                const double diff = static_cast<double>(targetFeatures[k]) - static_cast<double>(dbData[i][k]);
+                const double z = diff * invStd[k];
+                acc += z * z;
+            }
+            distance = static_cast<float>(std::sqrt(acc));
+        }
+        else
+        {
+            distance = distanceMetric->compute(targetFeatures, dbData[i]);
+        }
         if (!std::isfinite(distance))
         {
             continue;
@@ -48,6 +114,7 @@ bool FeatureMatcher::match(
         if (!found || distance < best.distance)
         {
             found = true;
+            best.label = dbLabels[i];
             best.filename = dbLabels[i];
             best.distance = distance;
         }
@@ -55,9 +122,13 @@ bool FeatureMatcher::match(
 
     if (!found)
     {
+        std::cout << "[MATCH] no finite-distance match found\n";
         return false;
     }
 
     bestMatch = best;
+    std::cout << "[MATCH] best label=" << bestMatch.label
+              << " dist=" << bestMatch.distance
+              << " metric=" << MetricFactory::metricTypeToString(metricType) << "\n";
     return true;
 }
