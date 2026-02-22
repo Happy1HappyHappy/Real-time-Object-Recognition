@@ -16,9 +16,9 @@ public:
     
 private:
     // default parameters for morphological filter
-    const int DEFAULT_K_SIZE = 3;
-    const int DEFAULT_E_STEPS = 1;
-    const int DEFAULT_D_STEPS = 1;
+    const int DEFAULT_K_SIZE = 5;
+    const int DEFAULT_E_STEPS = 2;
+    const int DEFAULT_D_STEPS = 2;
     const bool DEFAULT_IS_4WAY = false;
 
     void dilation(const cv::Mat* src, cv::Mat* dst, int k_size, bool is4Way);

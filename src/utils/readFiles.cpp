@@ -13,6 +13,8 @@
 #include <cstdlib>
 #include <dirent.h>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 
 /*
   Given a directory on the command line, scans through the directory for image files.
@@ -81,11 +83,64 @@ The function populates the provided vectors with the filenames and their corresp
 */
 int ReadFiles::readFeaturesFromCSV(const char *filename, std::vector<std::string> &filenames, std::vector<std::vector<float>> &data)
 {
-    if (csvUtil::read_image_data_csv(filename, filenames, data, 0) != 0)
+    filenames.clear();
+    data.clear();
+
+    std::ifstream ifs(filename);
+    if (!ifs.is_open())
     {
-        printf("Error reading CSV file.\n");
+        printf("Unable to open feature file: %s\n", filename);
         return -1;
     }
+
+    std::string line;
+    while (std::getline(ifs, line))
+    {
+        if (line.empty())
+            continue;
+
+        std::vector<std::string> tokens;
+        std::stringstream ss(line);
+        std::string token;
+        while (std::getline(ss, token, ','))
+        {
+            tokens.push_back(token);
+        }
+        if (tokens.size() < 2)
+            continue;
+
+        // CSV format in this project:
+        // label,path,f0,f1,...
+        // fallback also supports: label,f0,f1,...
+        std::string label = tokens[0];
+        size_t featureStart = 1;
+        if (tokens.size() >= 3)
+        {
+            char *end = nullptr;
+            std::strtof(tokens[1].c_str(), &end);
+            const bool secondIsNumeric = (end != tokens[1].c_str() && *end == '\0');
+            if (!secondIsNumeric)
+            {
+                featureStart = 2;
+            }
+        }
+
+        std::vector<float> fv;
+        for (size_t i = featureStart; i < tokens.size(); ++i)
+        {
+            char *end = nullptr;
+            const float val = std::strtof(tokens[i].c_str(), &end);
+            if (end == tokens[i].c_str() || *end != '\0')
+                continue;
+            fv.push_back(val);
+        }
+        if (fv.empty())
+            continue;
+
+        filenames.push_back(label);
+        data.push_back(std::move(fv));
+    }
+
     return 0;
 }
 

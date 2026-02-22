@@ -9,6 +9,7 @@
 #include "extractor.hpp"
 #include "filters.hpp"
 #include "preProcessor.hpp"
+#include "regionAnalyzer.hpp"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -20,16 +21,26 @@ int BaselineExtractor::extractMat(
     const cv::Mat &image,
     std::vector<float> *featureVector) const
 {
-    // TODO:
-    // Pre-process the frame and get the region of interest (ROI)
+    if (!featureVector || image.empty())
+    {
+        return -1;
+    }
 
-    // Bounding box of the ROI on the current frame
+    DetectionResult det = PreProcessor::detect(image);
+    if (!det.valid)
+    {
+        return -1;
+    }
 
-    // Extract feature vector from the ROI using the baseline extractor
+    const std::vector<double> shape = getShapeFeatureVector(det.bestRegion);
+    featureVector->clear();
+    featureVector->reserve(shape.size());
+    for (double v : shape)
+    {
+        featureVector->push_back(static_cast<float>(v));
+    }
 
-    // For demonstration, we will just return a dummy feature vector of size 512 with all values set to 0.5
-    featureVector->assign(100, 0.5f);
-    return 0; // Success
+    return featureVector->empty() ? -1 : 0;
 }
 
 int CNNExtractor::extractMat(
