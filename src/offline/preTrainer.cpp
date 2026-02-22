@@ -11,6 +11,7 @@ Description: Pre-training utilities for image processing.
 #include "csvUtil.hpp"
 #include "extractorFactory.hpp"
 #include "extractor.hpp"
+#include "preProcessor.hpp"
 #include "preTrainerCLI.hpp"
 #include "readFiles.hpp"
 
@@ -22,14 +23,41 @@ and save them to the output path.
 - @param outPath The path to the output CSV file where the extracted features will be saved.
 - @return 0 on success, non-zero value on error.
 */
-int extractFeaturesToFile(const std::vector<std::string> &imagePaths, const std::shared_ptr<IExtractor> &extractor, const std::string &outPath)
+int extractFeaturesToFile(
+    const std::vector<std::string> &imagePaths,
+    const std::shared_ptr<IExtractor> &extractor,
+    ExtractorType extractorType,
+    const std::string &outPath)
 {
     std::vector<float> featureVector; // vector to hold features for each image
     // extract features for each image
     for (const auto &path : imagePaths)
     {
         featureVector.clear(); // clear the feature vector for each image
-        int rc = extractor->extract(path.c_str(), &featureVector);
+        cv::Mat img = cv::imread(path);
+        if (img.empty())
+        {
+            printf("Warning: cannot read image %s\n", path.c_str());
+            continue;
+        }
+
+        // Pre-train mode: always use only the best detected region.
+        DetectionResult det = PreProcessor::detect(img, /*keepAllRegions*/ false);
+        if (!det.valid || det.embImage.empty())
+        {
+            printf("Warning: no valid region in %s\n", path.c_str());
+            continue;
+        }
+
+        int rc = -1;
+        if (extractorType == ExtractorType::BASELINE)
+        {
+            rc = extractor->extractRegion(det.bestRegion, &featureVector);
+        }
+        else
+        {
+            rc = extractor->extractMat(det.embImage, &featureVector);
+        }
         if (rc != 0)
         {
             printf("Warning: extract failed for %s\n", path.c_str());
@@ -73,7 +101,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     // extract features for each image and save to output file
-    extractFeaturesToFile(imagePaths, extractor, outPath);
+    extractFeaturesToFile(imagePaths, extractor, extractorType, outPath);
 
     return 0;
 }

@@ -9,13 +9,36 @@
 #include "extractor.hpp"
 #include "filters.hpp"
 #include "preProcessor.hpp"
+#include "regionDetect.hpp"
 #include "regionAnalyzer.hpp"
+#include "thresholding.hpp"
+#include "morphologicalFilter.hpp"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 #include <vector>
 #include <opencv2/opencv.hpp>
+
+int BaselineExtractor::extractRegion(
+    const RegionFeatures &region,
+    std::vector<float> *featureVector) const
+{
+    if (!featureVector)
+    {
+        return -1;
+    }
+
+    const std::vector<double> shape = getShapeFeatureVector(region);
+    featureVector->clear();
+    featureVector->reserve(shape.size());
+    for (double v : shape)
+    {
+        featureVector->push_back(static_cast<float>(v));
+    }
+    return featureVector->empty() ? -1 : 0;
+}
 
 int BaselineExtractor::extractMat(
     const cv::Mat &image,
@@ -26,21 +49,36 @@ int BaselineExtractor::extractMat(
         return -1;
     }
 
-    DetectionResult det = PreProcessor::detect(image);
-    if (!det.valid)
+    cv::Mat pre = PreProcessor::imgPreProcess(image, 0.5f, 50, 5);
+    cv::Mat binary;
+    Threadsholding::dynamicThreadsHold(pre, binary);
+
+    MorphologicalFilter mf;
+    cv::Mat cleaned;
+    mf.defaultDilationErosion(binary, cleaned);
+
+    cv::Mat labels;
+    RegionDetect::twoPassSegmentation(cleaned, labels);
+
+    const int frameArea = image.rows * image.cols;
+    const int minAreaPixels = std::max(2000, frameArea / 10);
+    RegionAnalyzer analyzer(RegionAnalyzer::Params(false, minAreaPixels, true));
+    auto regions = analyzer.analyzeLabels(labels);
+    if (regions.empty())
     {
         return -1;
     }
 
-    const std::vector<double> shape = getShapeFeatureVector(det.bestRegion);
-    featureVector->clear();
-    featureVector->reserve(shape.size());
-    for (double v : shape)
-    {
-        featureVector->push_back(static_cast<float>(v));
-    }
+    auto best = std::max_element(
+        regions.begin(), regions.end(),
+        [](const RegionFeatures &a, const RegionFeatures &b)
+        {
+            return a.area < b.area;
+        });
+    if (best == regions.end())
+        return -1;
 
-    return featureVector->empty() ? -1 : 0;
+    return extractRegion(*best, featureVector);
 }
 
 int CNNExtractor::extractMat(

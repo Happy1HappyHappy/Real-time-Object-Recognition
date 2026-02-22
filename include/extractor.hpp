@@ -18,6 +18,7 @@ struct BaselineExtractor : public IExtractor
     BaselineExtractor(ExtractorType type) : IExtractor(type) {}
     // Override the extractMat function to implement the feature extraction logic for the baseline extractor
     int extractMat(const cv::Mat &image, std::vector<float> *featureVector) const override;
+    int extractRegion(const RegionFeatures &region, std::vector<float> *featureVector) const override;
 };
 
 struct CNNExtractor : public IExtractor

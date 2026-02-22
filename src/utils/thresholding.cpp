@@ -17,9 +17,6 @@ void Threadsholding::dynamicThreadsHold(const cv::Mat &src, cv::Mat &dst)
         gray = src.clone();
     }
 
-    // Gaussian Blur to reduce noise
-    cv::GaussianBlur(gray, gray, cv::Size(5, 5), 0);
-
     // Pre process data for k-means calculation
     cv::Mat data;
     gray.convertTo(data, CV_32F);

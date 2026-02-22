@@ -305,10 +305,9 @@ std::string csvUtil::setOutputFilename(const std::string &basePath, const Extrac
   std::string extractorName = ExtractorFactory::extractorTypeToString(extractorType);
   // append feature name and position to the output file path
   if (outPath.size() >= 4 && outPath.substr(outPath.size() - 4) == ".csv")
-    outPath = outPath.substr(0, outPath.size() - 4) + "_" + extractorName +
-              "_" + ".csv";
+    outPath = outPath.substr(0, outPath.size() - 4) + "_" + extractorName + ".csv";
   else
-    outPath = outPath + "_" + extractorName + "_" + ".csv";
+    outPath = outPath + "_" + extractorName + ".csv";
   printf("Using feature type %s\n", extractorName.c_str());
   printf("Output will be saved to %s\n", outPath.c_str());
   return outPath;
