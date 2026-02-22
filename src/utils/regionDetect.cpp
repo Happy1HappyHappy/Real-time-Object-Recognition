@@ -1,8 +1,7 @@
-#include "regionDetect.hpp"
+# include "regionDetect.hpp"
 
 void RegionDetect::twoPassSegmentation(const cv::Mat &binaryImage, cv::Mat &regionMap)
 {
-<<<<<<< Updated upstream
     CV_Assert(!binaryImage.empty());
     CV_Assert(binaryImage.type() == CV_8U);
 
@@ -10,13 +9,6 @@ void RegionDetect::twoPassSegmentation(const cv::Mat &binaryImage, cv::Mat &regi
     if (bin.channels() != 1)
     {
         cv::cvtColor(bin, bin, cv::COLOR_BGR2GRAY);
-=======
-    // make sure using 32-bit to avoid overflow
-    regionMap.create(binaryImage.size(), CV_32SC1);
-
-    // initialize to 0 for background
-    regionMap.setTo(cv::Scalar(0));
-
     std::vector<int> parent;
     parent.push_back(0); // Index 0 for background
     int nextLabel = 1;
@@ -69,37 +61,27 @@ void RegionDetect::twoPassSegmentation(const cv::Mat &binaryImage, cv::Mat &regi
                 }
             }
         }
->>>>>>> Stashed changes
     }
-    cv::threshold(bin, bin, 0, 255, cv::THRESH_BINARY);
 
-<<<<<<< Updated upstream
     cv::connectedComponents(bin, regionMap, 8, CV_32S);
-=======
-    // update parent
-    for (size_t i = 1; i < parent.size(); ++i)
-    {
+      // update parent
+    for (size_t i = 1; i < parent.size(); ++i) {
         int root = i;
-        while (parent[root] != root)
-        {
+        while (parent[root] != root) {
             root = parent[root];
         }
-        parent[i] = root;
+        parent[i] = root; 
     }
 
     // assign value back to pixels
-    for (int y = 0; y < binaryImage.rows; ++y)
-    {
-        for (int x = 0; x < binaryImage.cols; ++x)
-        {
-            int currentLabel = regionMap.at<int>(y, x);
-            if (currentLabel > 0)
-            {
-                regionMap.at<int>(y, x) = parent[currentLabel];
+    for (int y = 0; y < src.rows; ++y) {
+        for (int x = 0; x < src.cols; ++x) {
+            int currentLabel = dst.at<int>(y, x);
+            if (currentLabel > 0) {
+                dst.at<int>(y, x) = parent[currentLabel]; 
             }
         }
     }
->>>>>>> Stashed changes
 }
 
 cv::Mat RegionDetect::colorizeRegionLabels(const cv::Mat &regionMap32S, uint64_t seed)
@@ -144,4 +126,5 @@ cv::Mat RegionDetect::colorizeRegionLabels(const cv::Mat &regionMap32S, uint64_t
         }
     }
     return vis;
+
 }
