@@ -58,6 +58,10 @@ public:
 
   explicit RegionAnalyzer(const Params &p = Params()) : params_(p) {}
 
+  bool computeFeaturesForRegion(
+      const cv::Mat &labels_32s,
+      int regionId,
+      RegionFeatures &out) const;
   std::vector<RegionFeatures> analyzeLabels(const cv::Mat &labels_32s) const;
 
 private:
@@ -71,11 +75,9 @@ private:
       const cv::Point2f &c,
       double &mu20, double &mu02, double &mu11);
 
-  static cv::Mat contourToMask(const cv::Size &sz,
-                               const std::vector<cv::Point> &contour);
-
-  static void computeAxisExtentsFromContour(
-      const std::vector<cv::Point> &contour,
+  static void computeAxisExtentsFromMask(
+      const cv::Mat &regionMask,
+      const cv::Rect &roi,
       const cv::Point2f &c,
       const cv::Point2f &e1,
       const cv::Point2f &e2,

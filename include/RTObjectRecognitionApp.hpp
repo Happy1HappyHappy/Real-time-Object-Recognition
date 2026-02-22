@@ -24,6 +24,7 @@ struct AppState
     bool baselineOn = false;
     bool cnnOn = false;
     bool eigenspaceOn = false;
+    bool debugOn = false;
 
     bool trainingOn = false;
     std::string label;
@@ -32,6 +33,17 @@ struct AppState
     std::string predLabel = "n/a";
     float predDistance = 0.0f;
     bool hasPrediction = false;
+    bool hasBaselinePrediction = false;
+    bool hasCnnPrediction = false;
+    bool hasEigenspacePrediction = false;
+    std::string baselineLabel = "n/a";
+    std::string cnnLabel = "n/a";
+    std::string eigenspaceLabel = "n/a";
+    float baselineDistance = 0.0f;
+    float cnnDistance = 0.0f;
+    float eigenspaceDistance = 0.0f;
+    std::vector<cv::Rect> predictedBoxes;
+    std::vector<std::string> predictedTexts;
 
     bool recordingOn = false;
     cv::VideoWriter writer;
@@ -52,7 +64,12 @@ public:
 private:
     static std::string dbPathFor(const AppState &st, ExtractorType type);
     void drawOverlay(cv::Mat &display, const AppState &st);
-    void enrollToDb(const AppState &st, ExtractorType type, const cv::Mat &embImage, const std::string &savedPath);
+    void enrollToDb(
+        const AppState &st,
+        ExtractorType type,
+        const cv::Mat &embImage,
+        const std::string &savedPath,
+        const RegionFeatures *bestRegion = nullptr);
     std::string sanitizeLabel(std::string s);
     std::string timestampNow();
     void handleTrainingKey(AppState &st, int key, const cv::Mat &frame, const DetectionResult &det);

@@ -9,6 +9,7 @@ Description: Declares the IExtractor interface for feature extraction.
 #pragma once
 
 #include "extractorFactory.hpp"
+#include "regionAnalyzer.hpp"
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <string>
@@ -34,6 +35,12 @@ public:
     }
 
     virtual int extractMat(const cv::Mat &image, std::vector<float> *out) const = 0;
+    virtual int extractRegion(const RegionFeatures &region, std::vector<float> *out) const
+    {
+        (void)region;
+        (void)out;
+        return -1;
+    }
 
     virtual std::string type() const { return ExtractorFactory::extractorTypeToString(type_); }
 
