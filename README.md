@@ -76,7 +76,7 @@ Extract features from a directory of images to populate your database:
 - **Pre-Processing**: Adaptive thresholding and morphological filtering to isolate objects.
 - **Region Analysis**: Connected components analysis with centroid, primary axis, and oriented bounding box (OBB) calculation.
 - **Feature Extraction**:
-    - **Baseline**: 7-dimensional shape vector (Percent Filled, Aspect Ratio, Hu Moments).
+    - **Baseline**: 9-dimensional shape vector (Percent Filled, Aspect Ratio, seven Hu Moments).
     - **CNN**: 512-dimensional embedding using ResNet18 (requires ONNX).
 - **Matching**: Scaled Euclidean (Baseline) and SSD/Cosine Similarity (CNN) for nearest-neighbor classification.
 - **Live Tuning**: Real-time adjustment of rejection thresholds to handle "unknown" objects.
