@@ -14,6 +14,7 @@ Description: Pre-training utilities for image processing.
 #include "preProcessor.hpp"
 #include "preTrainerCLI.hpp"
 #include "readFiles.hpp"
+#include "utilities.hpp"
 
 /*
 Helper function to extract features from a list of image paths using the specified extractor
@@ -56,7 +57,21 @@ int extractFeaturesToFile(
         }
         else
         {
-            rc = extractor->extractMat(det.embImage, &featureVector);
+            if (extractorType == ExtractorType::CNN)
+            {
+                cv::Mat cnnInput;
+                const bool prepOk = utilities::prepEmbeddingImage(img, det.bestRegion, cnnInput, 224, true);
+                if (!prepOk || cnnInput.empty())
+                {
+                    printf("Warning: CNN prep failed for %s\n", path.c_str());
+                    continue;
+                }
+                rc = extractor->extractMat(cnnInput, &featureVector);
+            }
+            else
+            {
+                rc = extractor->extractMat(det.embImage, &featureVector);
+            }
         }
         if (rc != 0)
         {
@@ -76,8 +91,18 @@ int main(int argc, char *argv[])
     // get the directory path, extractor type and output file path
     std::string dirname;
     std::string outputBase;
+    std::string modelPath;
     ExtractorType extractorType;
-    PreTrainerCLI::parseCLI(argc, argv, dirname, extractorType, outputBase);
+    const int parseRc = PreTrainerCLI::parseCLI(argc, argv, dirname, extractorType, outputBase, &modelPath);
+    if (parseRc != 0)
+    {
+        return (parseRc > 0) ? 0 : -1;
+    }
+
+    if (!modelPath.empty())
+    {
+        setenv("RTOR_CNN_MODEL", modelPath.c_str(), 1);
+    }
 
     // read the files in the directory, get the file paths
     std::vector<std::string> imagePaths;

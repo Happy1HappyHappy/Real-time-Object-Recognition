@@ -22,6 +22,12 @@ Description: Real-time object recognition using feature matching.
 #include "preProcessor.hpp"
 #include "regionAnalyzer.hpp"
 #include "RTObjectRecognitionApp.hpp"
+#include "utilities.hpp"
+
+namespace
+{
+constexpr bool kVerboseFrameLogs = false;
+}
 
 std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType type)
 {
@@ -38,12 +44,33 @@ std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType 
     }
 }
 
+static bool classifyByExtractor(
+    const std::shared_ptr<IExtractor> &extractor,
+    const cv::Mat &roi,
+    const std::string &dbPath,
+    MatchResult &matchResult,
+    MetricType metricType = MetricType::COSINE)
+{
+    if (!extractor || roi.empty() || dbPath.empty())
+    {
+        return false;
+    }
+    std::vector<float> featureVector;
+    const bool extractOk = (extractor->extractMat(roi, &featureVector) == 0);
+    if (!extractOk || featureVector.empty())
+    {
+        return false;
+    }
+    return FeatureMatcher::match(featureVector, dbPath, metricType, matchResult);
+}
+
 void RTObjectRecognitionApp::enrollToDb(
     const AppState &st,
     ExtractorType type,
     const cv::Mat &embImage,
     const std::string &savedPath,
-    const RegionFeatures *bestRegion)
+    const RegionFeatures *bestRegion,
+    const cv::Mat *sourceFrame)
 {
     auto extractor = ExtractorFactory::create(type);
     std::vector<float> featureVector;
@@ -54,7 +81,21 @@ void RTObjectRecognitionApp::enrollToDb(
     }
     else
     {
-        rc = extractor->extractMat(embImage, &featureVector);
+        if (type == ExtractorType::CNN && bestRegion != nullptr && sourceFrame != nullptr)
+        {
+            cv::Mat cnnInput;
+            const bool prepOk = utilities::prepEmbeddingImage(*sourceFrame, *bestRegion, cnnInput, 224, false);
+            if (!prepOk || cnnInput.empty())
+            {
+                std::cerr << "[TRAIN] CNN prep failed\n";
+                return;
+            }
+            rc = extractor->extractMat(cnnInput, &featureVector);
+        }
+        else
+        {
+            rc = extractor->extractMat(embImage, &featureVector);
+        }
     }
     if (rc != 0 || featureVector.empty())
     {
@@ -112,22 +153,27 @@ int RTObjectRecognitionApp::run()
         if (frame.empty())
             break;
         ++frameId;
-        std::cout << "[FRAME " << frameId << "] captured\n";
+        if (kVerboseFrameLogs)
+            std::cout << "[FRAME " << frameId << "] captured\n";
 
         cv::Mat currentFrame = frame.clone();
         st.lastDetection = PreProcessor::detect(currentFrame);
         currentFrame = st.lastDetection.debugFrame.clone();
         if (st.lastDetection.valid)
         {
-            std::cout << "[DETECT] valid bbox=("
-                      << st.lastDetection.bestBBox.x << ","
-                      << st.lastDetection.bestBBox.y << ","
-                      << st.lastDetection.bestBBox.width << ","
-                      << st.lastDetection.bestBBox.height << ")\n";
+            if (kVerboseFrameLogs)
+            {
+                std::cout << "[DETECT] valid bbox=("
+                          << st.lastDetection.bestBBox.x << ","
+                          << st.lastDetection.bestBBox.y << ","
+                          << st.lastDetection.bestBBox.width << ","
+                          << st.lastDetection.bestBBox.height << ")\n";
+            }
         }
         else
         {
-            std::cout << "[DETECT] no valid region\n";
+            if (kVerboseFrameLogs)
+                std::cout << "[DETECT] no valid region\n";
         }
 
         st.hasPrediction = false;
@@ -151,7 +197,15 @@ int RTObjectRecognitionApp::run()
             const size_t n = std::min(st.lastDetection.regions.size(),
                                       std::min(st.lastDetection.regionBBoxes.size(),
                                                st.lastDetection.regionEmbImages.size()));
-            std::cout << "[CLASSIFY] candidates=" << n << "\n";
+            if (kVerboseFrameLogs)
+                std::cout << "[CLASSIFY] candidates=" << n << "\n";
+            const bool runCnnThisFrame = st.cnnOn && (st.cnnIntervalFrames <= 1 || (frameId % static_cast<size_t>(st.cnnIntervalFrames) == 0));
+            size_t cnnProcessedCount = 0;
+            if (runCnnThisFrame)
+            {
+                st.cachedCnnLabels.assign(n, "NO");
+                st.cachedCnnDistances.assign(n, 0.0f);
+            }
             for (size_t i = 0; i < n; ++i)
             {
                 const cv::Rect box = st.lastDetection.regionBBoxes[i];
@@ -179,28 +233,52 @@ int RTObjectRecognitionApp::run()
 
                 if (st.cnnOn)
                 {
-                    std::vector<float> featureVector;
                     MatchResult matchResult;
-                    const bool extractOk = (cnnExtractor->extractMat(roi, &featureVector) == 0);
-                    if (extractOk && FeatureMatcher::match(featureVector, cnnDbPath, MetricType::COSINE, matchResult))
+                    if (runCnnThisFrame && cnnProcessedCount < static_cast<size_t>(std::max(1, st.maxCnnRegionsPerFrame)))
                     {
-                        st.hasCnnPrediction = true;
-                        st.cnnLabel = matchResult.label;
-                        st.cnnDistance = matchResult.distance;
-                        parts.push_back("C:" + matchResult.label);
+                        ++cnnProcessedCount;
+                        cv::Mat cnnInput;
+                        const bool prepOk = utilities::prepEmbeddingImage(currentFrame, rf, cnnInput, 224, false);
+                        if (prepOk && classifyByExtractor(cnnExtractor, cnnInput, cnnDbPath, matchResult, MetricType::SSD))
+                        {
+                            st.hasCnnPrediction = true;
+                            st.cnnLabel = matchResult.label;
+                            st.cnnDistance = matchResult.distance;
+                            st.cachedCnnLabels[i] = matchResult.label;
+                            st.cachedCnnDistances[i] = matchResult.distance;
+                            parts.push_back("C:" + matchResult.label);
+                        }
+                        else
+                        {
+                            st.cachedCnnLabels[i] = "NO";
+                            st.cachedCnnDistances[i] = 0.0f;
+                            parts.push_back("C:NO");
+                        }
                     }
                     else
                     {
-                        parts.push_back("C:NO");
+                        if (i < st.cachedCnnLabels.size() && st.cachedCnnLabels[i] != "NO")
+                        {
+                            st.hasCnnPrediction = true;
+                            st.cnnLabel = st.cachedCnnLabels[i];
+                            st.cnnDistance = st.cachedCnnDistances[i];
+                            parts.push_back("C:" + st.cachedCnnLabels[i]);
+                        }
+                        else if (i < st.cachedCnnLabels.size() && st.cachedCnnLabels[i] == "NO")
+                        {
+                            parts.push_back("C:NO");
+                        }
+                        else
+                        {
+                            parts.push_back("C:SKIP");
+                        }
                     }
                 }
 
                 if (st.eigenspaceOn)
                 {
-                    std::vector<float> featureVector;
                     MatchResult matchResult;
-                    const bool extractOk = (eigenspaceExtractor->extractMat(roi, &featureVector) == 0);
-                    if (extractOk && FeatureMatcher::match(featureVector, eigenspaceDbPath, MetricType::COSINE, matchResult))
+                    if (classifyByExtractor(eigenspaceExtractor, roi, eigenspaceDbPath, matchResult))
                     {
                         st.hasEigenspacePrediction = true;
                         st.eigenspaceLabel = matchResult.label;
@@ -222,16 +300,19 @@ int RTObjectRecognitionApp::run()
                 }
                 st.predictedBoxes.push_back(box);
                 st.predictedTexts.push_back(oss.str());
-                std::cout << "[PRED][region " << i << "] " << oss.str() << "\n";
+                if (kVerboseFrameLogs)
+                    std::cout << "[PRED][region " << i << "] " << oss.str() << "\n";
             }
         }
         else if (st.baselineOn || st.cnnOn || st.eigenspaceOn)
         {
-            std::cout << "[CLASSIFY] skipped (no valid detection)\n";
+            if (kVerboseFrameLogs)
+                std::cout << "[CLASSIFY] skipped (no valid detection)\n";
         }
         else
         {
-            std::cout << "[CLASSIFY] skipped (no mode enabled)\n";
+            if (kVerboseFrameLogs)
+                std::cout << "[CLASSIFY] skipped (no mode enabled)\n";
         }
 
         st.hasPrediction = st.hasBaselinePrediction || st.hasCnnPrediction || st.hasEigenspacePrediction;
@@ -265,6 +346,36 @@ int RTObjectRecognitionApp::run()
         cv::Mat display = currentFrame.clone();
         drawOverlay(display, st);
         cv::imshow("Video", display);
+        if (st.showThresholdWindow)
+        {
+            cv::namedWindow("Threshold", 1);
+            if (!st.lastDetection.thresholdedImage.empty())
+                cv::imshow("Threshold", st.lastDetection.thresholdedImage);
+        }
+        else
+        {
+            cv::destroyWindow("Threshold");
+        }
+        if (st.showCleanedWindow)
+        {
+            cv::namedWindow("Cleaned", 1);
+            if (!st.lastDetection.cleanedImage.empty())
+                cv::imshow("Cleaned", st.lastDetection.cleanedImage);
+        }
+        else
+        {
+            cv::destroyWindow("Cleaned");
+        }
+        if (st.showRegionMapWindow)
+        {
+            cv::namedWindow("RegionMap", 1);
+            if (!st.lastDetection.regionIdVis.empty())
+                cv::imshow("RegionMap", st.lastDetection.regionIdVis);
+        }
+        else
+        {
+            cv::destroyWindow("RegionMap");
+        }
 
         int key = cv::waitKey(1);
 
@@ -302,7 +413,11 @@ int RTObjectRecognitionApp::run()
             {
                 ok = cv::imwrite(pRegion, st.lastDetection.regionIdVis) && ok;
             }
-            ok = cv::imwrite(pAxisObb, currentFrame) && ok;
+            AppState saveState = st;
+            saveState.debugOn = true; // Force OBB + axis visualization for saved debug frame.
+            cv::Mat axisObbFrame = currentFrame.clone();
+            drawOverlay(axisObbFrame, saveState);
+            ok = cv::imwrite(pAxisObb, axisObbFrame) && ok;
 
             if (ok)
             {
@@ -342,6 +457,8 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
     {
         cv::putText(display, "Press 't' train, 'd' debug OBB/axis, 's' screenshot, 'q' quit",
                     {20, 30}, cv::FONT_HERSHEY_DUPLEX, 0.7, {100, 100, 100}, 2, cv::LINE_AA);
+        cv::putText(display, "Press '1' threshold, '2' cleaned, '3' region map windows",
+                    {20, 55}, cv::FONT_HERSHEY_DUPLEX, 0.65, {100, 100, 100}, 2, cv::LINE_AA);
     }
 
     std::string status =
@@ -351,12 +468,12 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
         "   D(Debug): " + onOff(st.debugOn);
 
     cv::putText(display, status,
-                {20, 80}, cv::FONT_HERSHEY_DUPLEX, 0.7,
+                {20, 95}, cv::FONT_HERSHEY_DUPLEX, 0.7,
                 {100, 100, 100}, 2, cv::LINE_AA);
 
     cv::putText(display,
                 std::string("Detection: ") + (st.lastDetection.valid ? "VALID" : "NONE"),
-                {20, 110},
+                {20, 125},
                 cv::FONT_HERSHEY_DUPLEX,
                 0.65,
                 st.lastDetection.valid ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 180, 255),
@@ -398,7 +515,7 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
     {
         std::ostringstream summary;
         summary << "Pred Regions: " << st.predictedTexts.size();
-        cv::putText(display, summary.str(), {20, 140},
+        cv::putText(display, summary.str(), {20, 155},
                     cv::FONT_HERSHEY_DUPLEX, 0.75, cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
 
         for (size_t i = 0; i < st.predictedTexts.size() && i < st.predictedBoxes.size(); ++i)
@@ -476,19 +593,19 @@ void RTObjectRecognitionApp::handleTrainingKey(AppState &st, int key, const cv::
                 bool anyModeEnabled = st.baselineOn || st.cnnOn || st.eigenspaceOn;
                 if (!anyModeEnabled)
                 {
-                    enrollToDb(st, BASELINE, det.embImage, out, &det.bestRegion);
+                    enrollToDb(st, BASELINE, det.embImage, out, &det.bestRegion, &frame);
                 }
                 if (st.baselineOn)
                 {
-                    enrollToDb(st, BASELINE, det.embImage, out, &det.bestRegion);
+                    enrollToDb(st, BASELINE, det.embImage, out, &det.bestRegion, &frame);
                 }
                 if (st.cnnOn)
                 {
-                    enrollToDb(st, CNN, det.embImage, out);
+                    enrollToDb(st, CNN, det.embImage, out, &det.bestRegion, &frame);
                 }
                 if (st.eigenspaceOn)
                 {
-                    enrollToDb(st, EIGENSPACE, det.embImage, out);
+                    enrollToDb(st, EIGENSPACE, det.embImage, out, &det.bestRegion, &frame);
                 }
             }
             else
@@ -549,6 +666,24 @@ bool RTObjectRecognitionApp::handleKey(AppState &st, int key, const cv::Size &re
         {
             st.debugOn = !st.debugOn;
             std::cout << "Debug OBB/Axis: " << (st.debugOn ? "ON" : "OFF") << "\n";
+            return true;
+        }
+        if (key == '1')
+        {
+            st.showThresholdWindow = !st.showThresholdWindow;
+            std::cout << "Threshold window: " << (st.showThresholdWindow ? "ON" : "OFF") << "\n";
+            return true;
+        }
+        if (key == '2')
+        {
+            st.showCleanedWindow = !st.showCleanedWindow;
+            std::cout << "Cleaned window: " << (st.showCleanedWindow ? "ON" : "OFF") << "\n";
+            return true;
+        }
+        if (key == '3')
+        {
+            st.showRegionMapWindow = !st.showRegionMapWindow;
+            std::cout << "RegionMap window: " << (st.showRegionMapWindow ? "ON" : "OFF") << "\n";
             return true;
         }
         if (key == 'r' || key == 'R')
