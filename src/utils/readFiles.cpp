@@ -144,19 +144,3 @@ int ReadFiles::readFeaturesFromCSV(const char *filename, std::vector<std::string
 
     return 0;
 }
-
-/*
-Checks if the target image is present in the database by comparing filenames.
-
-- @param targetPath The path to the target image.
-- @param dbFilename The path to the database image.
-- @return true if the target image is in the database, false otherwise.
-*/
-bool ReadFiles::isTargetImageInDatabase(const char *targetPath, const char *dbFilename)
-{
-    namespace fs = std::filesystem;
-    if (fs::path(dbFilename).filename() == fs::path(targetPath).filename())
-        return true;
-
-    return false;
-}

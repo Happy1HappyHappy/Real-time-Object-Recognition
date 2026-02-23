@@ -31,7 +31,6 @@ class PreProcessor
 public:
     static DetectionResult detect(const cv::Mat &input, bool keepAllRegions);
     static DetectionResult detect(const cv::Mat &input);
-    static cv::Mat process(const cv::Mat &input, cv::Mat &output);
     static cv::Mat imgPreProcess(
         const cv::Mat &input,
         float alpha = 0.5f,

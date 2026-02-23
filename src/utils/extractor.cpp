@@ -7,7 +7,6 @@
 */
 
 #include "extractor.hpp"
-#include "filters.hpp"
 #include "preProcessor.hpp"
 #include "regionDetect.hpp"
 #include "regionAnalyzer.hpp"

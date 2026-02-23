@@ -1,9 +1,9 @@
 /*
 Claire Liu, Yu-Jing Wei
-regionDetect.hpp
+DistanceTransform.hpp
 
-Path: include/regionDetect.hpp
-Description: Region detection utilities (grassfire / connected components).
+Path: include/distanceTransform.hpp
+Description: Distance transform utilities (grassfire / connected components).
 */
 
 #pragma once
@@ -11,6 +11,10 @@ Description: Region detection utilities (grassfire / connected components).
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+/*
+DistanceTransform class to handle distance transform operations
+such as grassfire and connected components.
+*/
 class DistanceTransform
 {
 public:

@@ -30,25 +30,6 @@ public:
   static int append_image_data_csv(const char *filename, const char *image_filename, std::vector<float> &image_data, int reset_file = 0);
 
   /*
-    Given a file with the format of a string as the first column and
-    floating point numbers as the remaining columns, this function
-    returns the filenames as a std::vector of character arrays, and the
-    remaining data as a 2D std::vector<float>.
-
-    filenames will contain all of the image file names.
-    data will contain the features calculated from each image.
-
-    If echo_file is true, it prints out the contents of the file as read
-    into memory.
-
-  The function returns a non-zero value if something goes wrong.
- */
-  static int read_image_data_csv(const std::string &filename,
-                                 std::vector<std::string> &filenames,
-                                 std::vector<std::vector<float>> &data,
-                                 int echo_file = 0);
-
-  /*
   Clears the contents of the specified file.
   @param filename The path to the file to be cleared.
   @return 0 on success, non-zero value on error.

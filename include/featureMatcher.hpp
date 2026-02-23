@@ -13,6 +13,9 @@ Description: Header file for featureMatcher.cpp to
 #include "metricFactory.hpp"
 #include "matchResult.hpp"
 
+/*
+FeatureMatcher class provides a static method to match features between a query image and a database of images.
+*/
 class FeatureMatcher
 {
 public:

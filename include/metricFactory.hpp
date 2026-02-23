@@ -9,7 +9,6 @@ instances based on feature type.
 
 #pragma once // Include guard
 
-#include "extractorFactory.hpp"
 #include <memory>
 #include <vector>
 
@@ -43,10 +42,6 @@ based on the specified MetricType.
 - create(MetricType type): A factory method that takes a MetricType and returns a
                     shared pointer to an IDistanceMetric instance corresponding to that type.
                     If the type is unrecognized, it returns nullptr.
-- stringToMetricType(const char *typeStr): A utility method that converts a string
-                    representation of a metric type (e.g., "ssd", "hist_intersection") to
-                    the corresponding MetricType enum value. If the string does not match
-                    any known metric type, it returns UNKNOWN_METRIC.
 - metricTypeToString(MetricType type): A utility method that converts a MetricType enum
                     value back to its string representation for display purposes. If the
                     type is unrecognized, it returns "Unknown".
@@ -55,6 +50,5 @@ class MetricFactory
 {
 public:
     static std::shared_ptr<IDistanceMetric> create(MetricType type);
-    static MetricType stringToMetricType(const char *typeStr);
     static std::string metricTypeToString(MetricType type);
 };

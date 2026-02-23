@@ -38,25 +38,6 @@ std::shared_ptr<IDistanceMetric> MetricFactory::create(MetricType type)
 }
 
 /*
-MetricFactory::stringToMetricType(const char *typeStr)
-This static method converts a string representation of a metric type to the corresponding
-MetricType enum value. It compares the input string to known metric type strings:
-- "ssd" returns SSD
-- "hist_intersection" returns HIST_INTERSECTION
-- "cosine" returns COSINE
-*/
-MetricType MetricFactory::stringToMetricType(const char *typeStr)
-{
-    static const std::unordered_map<std::string, MetricType> typeMap = {
-        {"ssd", SSD},
-        {"hist_ix", HIST_INTERSECTION},
-        {"cosine", COSINE}};
-
-    auto it = typeMap.find(typeStr);
-    return (it != typeMap.end()) ? it->second : UNKNOWN_METRIC;
-}
-
-/*
 MetricFactory::metricTypeToString(MetricType type)
 This static method converts a MetricType enum value back to its string representation for
 display purposes. It uses a switch statement to return the corresponding string for each
