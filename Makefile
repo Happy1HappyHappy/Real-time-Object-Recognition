@@ -100,6 +100,7 @@ COMMON_OBJS = $(OBJDIR)/csvUtil.o \
 			  $(OBJDIR)/regionAnalyzer.o \
               $(OBJDIR)/readFiles.o \
 			  $(OBJDIR)/regionDetect.o \
+			  $(OBJDIR)/distanceTransform.o \
 			  $(OBJDIR)/utilities.o \
 			  $(OBJDIR)/thresholding.o \
 			  $(OBJDIR)/morphologicalFilter.o

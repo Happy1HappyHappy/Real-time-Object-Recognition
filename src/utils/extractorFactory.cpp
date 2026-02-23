@@ -18,8 +18,7 @@ on the specified ExtractorType. It uses a switch statement to determine which ty
 extractor to create:
 - BASELINE, it creates and returns a shared pointer to a BaselineExtractor instance.
 - CNN, it creates and returns a shared pointer to a CNNExtractor instance.
-- EIGENSPACE, it creates and returns a shared pointer to an EigenspaceExtractor instance.
-- UNKNOWN_EXTRACTOR or any unrecognized type, it returns nullptr to indicate that no valid
+ - UNKNOWN_EXTRACTOR or any unrecognized type, it returns nullptr to indicate that no valid
     extractor could be created.
 */
 std::shared_ptr<IExtractor> ExtractorFactory::create(ExtractorType type)
@@ -30,8 +29,6 @@ std::shared_ptr<IExtractor> ExtractorFactory::create(ExtractorType type)
         return std::make_shared<BaselineExtractor>(type);
     case CNN:
         return std::make_shared<CNNExtractor>(type);
-    case EIGENSPACE:
-        return std::make_shared<EigenspaceExtractor>(type);
     default:
         throw std::invalid_argument("Unknown ExtractorType");
     }
@@ -43,15 +40,13 @@ This static method converts a string representation of an extractor type to the 
 ExtractorType enum value. It compares the input string to known extractor type strings:
 - "baseline" returns BASELINE
 - "cnn" returns CNN
-- "eigenspace" returns EIGENSPACE
 If the input string does not match any known extractor type, it returns UNKNOWN_EXTRACTOR.
 */
 ExtractorType ExtractorFactory::stringToExtractorType(const char *typeStr)
 {
     static const std::unordered_map<std::string, ExtractorType> typeMap = {
         {"baseline", BASELINE},
-        {"cnn", CNN},
-        {"eigenspace", EIGENSPACE}};
+        {"cnn", CNN}};
 
     auto it = typeMap.find(typeStr);
     return (it != typeMap.end()) ? it->second : UNKNOWN_EXTRACTOR;
@@ -64,15 +59,13 @@ display purposes. It uses a switch statement to return the corresponding string 
 ExtractorType:
 - BASELINE returns "baseline"
 - CNN returns "cnn"
-- EIGENSPACE returns "eigenspace"
 If the type is unrecognized, it returns "Unknown".
 */
 std::string ExtractorFactory::extractorTypeToString(ExtractorType type)
 {
     static const std::unordered_map<ExtractorType, std::string> reverseMap = {
         {BASELINE, "baseline"},
-        {CNN, "cnn"},
-        {EIGENSPACE, "eigenspace"}};
+        {CNN, "cnn"}};
 
     auto it = reverseMap.find(type);
     return (it != reverseMap.end()) ? it->second : "Unknown";

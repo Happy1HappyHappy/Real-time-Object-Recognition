@@ -37,4 +37,7 @@ public:
         float alpha = 0.5f,
         int satThreshold = 50,
         int blurKernel = 5);
+
+private:
+    static cv::Mat filterLabelsByMinArea(const cv::Mat &binary, int minAreaPixels);
 };

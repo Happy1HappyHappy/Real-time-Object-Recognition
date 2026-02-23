@@ -27,10 +27,3 @@ struct CNNExtractor : public IExtractor
     // Override the extractMat function to implement the feature extraction logic for the ResNet extractor
     int extractMat(const cv::Mat &image, std::vector<float> *featureVector) const override;
 };
-
-struct EigenspaceExtractor : public IExtractor
-{
-    EigenspaceExtractor(ExtractorType type) : IExtractor(type) {}
-    // Override the extractMat function to implement the feature extraction logic for the eigenspace extractor
-    int extractMat(const cv::Mat &image, std::vector<float> *featureVector) const override;
-};

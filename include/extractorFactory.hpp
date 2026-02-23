@@ -21,7 +21,6 @@ enum ExtractorType
 {
     BASELINE,
     CNN,
-    EIGENSPACE,
     UNKNOWN_EXTRACTOR
 };
 

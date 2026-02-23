@@ -240,19 +240,3 @@ int CNNExtractor::extractMat(
     return -1;
 #endif
 }
-
-int EigenspaceExtractor::extractMat(
-    const cv::Mat &image,
-    std::vector<float> *featureVector) const
-{
-    // TODO:
-    // Pre-process the frame and get the region of interest (ROI)
-
-    // Bounding box of the ROI on the current frame
-
-    // Extract feature vector from the ROI using the eigenspace extractor
-
-    // For demonstration, we will just return a dummy feature vector of size 100 with all values set to 0.5
-    featureVector->assign(100, 0.5f);
-    return 0; // Success
-}

@@ -41,8 +41,6 @@ bool isUnknownMatch(const AppState &st, ExtractorType type, float distance)
         return distance > st.baselineUnknownThreshold;
     case CNN:
         return distance > st.cnnUnknownThreshold;
-    case EIGENSPACE:
-        return distance > st.eigenspaceUnknownThreshold;
     default:
         return false;
     }
@@ -54,9 +52,7 @@ std::string thresholdsSummary(const AppState &st)
     oss << std::fixed << std::setprecision(2)
         << "B<=" << st.baselineUnknownThreshold
         << " C<=" << st.cnnUnknownThreshold
-        << " E<=" << st.eigenspaceUnknownThreshold;
     return oss.str();
-}
 }
 
 std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType type)
@@ -67,8 +63,6 @@ std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType 
         return (st.dataDir / "features_baseline.csv").string();
     case CNN:
         return (st.dataDir / "features_cnn.csv").string();
-    case EIGENSPACE:
-        return (st.dataDir / "features_eigenspace.csv").string();
     default:
         return "";
     }
@@ -171,10 +165,8 @@ int RTObjectRecognitionApp::run()
     // create the extractor based on the specified type
     auto baselineExtractor = ExtractorFactory::create(ExtractorType::BASELINE);
     auto cnnExtractor = ExtractorFactory::create(ExtractorType::CNN);
-    auto eigenspaceExtractor = ExtractorFactory::create(ExtractorType::EIGENSPACE);
     const std::string baselineDbPath = dbPathFor(st, BASELINE);
     const std::string cnnDbPath = dbPathFor(st, CNN);
-    const std::string eigenspaceDbPath = dbPathFor(st, EIGENSPACE);
     size_t frameId = 0;
 
     for (;;)
@@ -212,17 +204,14 @@ int RTObjectRecognitionApp::run()
         st.predDistance = 0.0f;
         st.hasBaselinePrediction = false;
         st.hasCnnPrediction = false;
-        st.hasEigenspacePrediction = false;
         st.baselineLabel = "n/a";
         st.cnnLabel = "n/a";
-        st.eigenspaceLabel = "n/a";
         st.baselineDistance = 0.0f;
         st.cnnDistance = 0.0f;
-        st.eigenspaceDistance = 0.0f;
         st.predictedBoxes.clear();
         st.predictedTexts.clear();
 
-        if (st.lastDetection.valid && (st.baselineOn || st.cnnOn || st.eigenspaceOn))
+        if (st.lastDetection.valid && (st.baselineOn || st.cnnOn))
         {
             const size_t n = std::min(st.lastDetection.regions.size(),
                                       std::min(st.lastDetection.regionBBoxes.size(),
@@ -307,23 +296,6 @@ int RTObjectRecognitionApp::run()
                     }
                 }
 
-                if (st.eigenspaceOn)
-                {
-                    MatchResult matchResult;
-                    if (classifyByExtractor(eigenspaceExtractor, roi, eigenspaceDbPath, matchResult))
-                    {
-                        st.hasEigenspacePrediction = true;
-                        st.eigenspaceDistance = matchResult.distance;
-                        const bool unknown = isUnknownMatch(st, EIGENSPACE, matchResult.distance);
-                        st.eigenspaceLabel = unknown ? st.unknownLabel : matchResult.label;
-                        parts.push_back("E:" + st.eigenspaceLabel);
-                    }
-                    else
-                    {
-                        parts.push_back("E:NO");
-                    }
-                }
-
                 std::ostringstream oss;
                 for (size_t k = 0; k < parts.size(); ++k)
                 {
@@ -337,7 +309,7 @@ int RTObjectRecognitionApp::run()
                     std::cout << "[PRED][region " << i << "] " << oss.str() << "\n";
             }
         }
-        else if (st.baselineOn || st.cnnOn || st.eigenspaceOn)
+        else if (st.baselineOn || st.cnnOn)
         {
             if (kVerboseFrameLogs)
                 std::cout << "[CLASSIFY] skipped (no valid detection)\n";
@@ -348,7 +320,7 @@ int RTObjectRecognitionApp::run()
                 std::cout << "[CLASSIFY] skipped (no mode enabled)\n";
         }
 
-        st.hasPrediction = st.hasBaselinePrediction || st.hasCnnPrediction || st.hasEigenspacePrediction;
+        st.hasPrediction = st.hasBaselinePrediction || st.hasCnnPrediction;
         if (st.hasBaselinePrediction)
         {
             st.predExtractor = "baseline";
@@ -361,23 +333,17 @@ int RTObjectRecognitionApp::run()
             st.predLabel = st.cnnLabel;
             st.predDistance = st.cnnDistance;
         }
-        else if (st.hasEigenspacePrediction)
-        {
-            st.predExtractor = "eigenspace";
-            st.predLabel = st.eigenspaceLabel;
-            st.predDistance = st.eigenspaceDistance;
-        }
-
         st.hasPrediction = !st.predictedTexts.empty();
-
-        // if recordingOn, write the current frame to the video file
-        if (st.recordingOn && st.writer.isOpened())
-            st.writer.write(currentFrame);
 
         // use a clone of the current frame for display
         // so we can draw overlays without affecting the original frame
         cv::Mat display = currentFrame.clone();
         drawOverlay(display, st);
+
+        // If recording is enabled, write the overlaid frame (not the raw frame).
+        if (st.recordingOn && st.writer.isOpened())
+            st.writer.write(display);
+
         cv::imshow("Video", display);
         if (st.showThresholdWindow)
         {
@@ -497,7 +463,6 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
     std::string status =
         "B(Baseline): " + onOff(st.baselineOn) +
         "   C(CNN): " + onOff(st.cnnOn) +
-        "   E(Eigenspace): " + onOff(st.eigenspaceOn) +
         "   D(Debug): " + onOff(st.debugOn);
 
     cv::putText(display, status,
@@ -547,7 +512,7 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
         }
     }
 
-    const bool anyModeOn = st.baselineOn || st.cnnOn || st.eigenspaceOn;
+    const bool anyModeOn = st.baselineOn || st.cnnOn;
     if (anyModeOn)
     {
         std::ostringstream summary;
@@ -627,7 +592,7 @@ void RTObjectRecognitionApp::handleTrainingKey(AppState &st, int key, const cv::
             if (cv::imwrite(out, det.embImage))
             {
                 std::cout << "[TRAIN] Saved " << out << "\n";
-                bool anyModeEnabled = st.baselineOn || st.cnnOn || st.eigenspaceOn;
+                bool anyModeEnabled = st.baselineOn || st.cnnOn;
                 if (!anyModeEnabled)
                 {
                     enrollToDb(st, BASELINE, det.embImage, out, &det.bestRegion, &frame);
@@ -639,10 +604,6 @@ void RTObjectRecognitionApp::handleTrainingKey(AppState &st, int key, const cv::
                 if (st.cnnOn)
                 {
                     enrollToDb(st, CNN, det.embImage, out, &det.bestRegion, &frame);
-                }
-                if (st.eigenspaceOn)
-                {
-                    enrollToDb(st, EIGENSPACE, det.embImage, out, &det.bestRegion, &frame);
                 }
             }
             else
@@ -686,12 +647,6 @@ bool RTObjectRecognitionApp::handleKey(AppState &st, int key, const cv::Size &re
             return true;
         }
 
-        if (!st.trainingOn && (key == 'e' || key == 'E'))
-        {
-            st.eigenspaceOn = !st.eigenspaceOn;
-            std::cout << "Eigenspace: " << (st.eigenspaceOn ? "ON" : "OFF") << "\n";
-            return true;
-        }
         if ((key == 't' || key == 'T'))
         {
             st.trainingOn = true;
@@ -759,7 +714,6 @@ bool RTObjectRecognitionApp::handleKey(AppState &st, int key, const cv::Size &re
         {
             st.baselineUnknownThreshold = std::max(0.01f, st.baselineUnknownThreshold * 0.9f);
             st.cnnUnknownThreshold = std::max(0.01f, st.cnnUnknownThreshold * 0.9f);
-            st.eigenspaceUnknownThreshold = std::max(0.01f, st.eigenspaceUnknownThreshold * 0.9f);
             std::cout << "Unknown thresholds tightened: " << thresholdsSummary(st) << "\n";
             return true;
         }
@@ -767,7 +721,6 @@ bool RTObjectRecognitionApp::handleKey(AppState &st, int key, const cv::Size &re
         {
             st.baselineUnknownThreshold *= 1.1f;
             st.cnnUnknownThreshold *= 1.1f;
-            st.eigenspaceUnknownThreshold *= 1.1f;
             std::cout << "Unknown thresholds loosened: " << thresholdsSummary(st) << "\n";
             return true;
         }
