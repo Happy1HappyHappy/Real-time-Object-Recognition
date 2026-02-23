@@ -12,11 +12,57 @@
 #include "thresholding.hpp"
 #include "morphologicalFilter.hpp"
 #include <algorithm>
+#include <unordered_map>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
 #include <string>
 #include <opencv2/opencv.hpp>
+
+cv::Mat PreProcessor::filterLabelsByMinArea(const cv::Mat &binary, int minAreaPixels)
+{
+  CV_Assert(!binary.empty());
+  CV_Assert(binary.type() == CV_8U);
+
+  cv::Mat stats;
+  cv::Mat centroids;
+  cv::Mat ccLabels;
+  const int numLabels = cv::connectedComponentsWithStats(binary, ccLabels, stats, centroids, 8, CV_32S);
+  if (numLabels <= 1)
+  {
+    return cv::Mat::zeros(binary.size(), CV_32S);
+  }
+
+  cv::Mat filteredLabels = cv::Mat::zeros(ccLabels.size(), CV_32S);
+  std::unordered_map<int, int> remap;
+  int nextId = 1;
+  for (int id = 1; id < numLabels; ++id)
+  {
+    const int area = stats.at<int>(id, cv::CC_STAT_AREA);
+    if (area >= minAreaPixels)
+    {
+      remap[id] = nextId++;
+    }
+  }
+
+  for (int y = 0; y < ccLabels.rows; ++y)
+  {
+    const int *srcRow = ccLabels.ptr<int>(y);
+    int *dstRow = filteredLabels.ptr<int>(y);
+    for (int x = 0; x < ccLabels.cols; ++x)
+    {
+      const int oldId = srcRow[x];
+      if (oldId <= 0)
+        continue;
+      auto it = remap.find(oldId);
+      if (it != remap.end())
+      {
+        dstRow[x] = it->second;
+      }
+    }
+  }
+  return filteredLabels;
+}
 
 DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
 {
@@ -45,6 +91,13 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   // Analyze the labeled regions to extract features and find the best candidate
   const int frameArea = input.rows * input.cols;
   const int minAreaPixels = std::max(500, frameArea / 50);
+
+  // Connected components + min-area filtering + sequential relabeling.
+  regionLabels = filterLabelsByMinArea(cleanedBinary, minAreaPixels);
+
+  // Colorize the post-filter labels for visualization
+  result.regionIdVis = RegionDetect::colorizeRegionLabels(regionLabels);
+
   RegionAnalyzer analyzer(RegionAnalyzer::Params(
       /*keepMasks*/ false,
       minAreaPixels,

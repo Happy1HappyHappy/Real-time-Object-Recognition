@@ -116,7 +116,7 @@ void PreTrainerCLI::printUsage(const char *prog)
     printf("\n");
     printf("options:\n");
     printf("  -i, --input      <dir>       input image directory\n");
-    printf("  -e, --extractor  <type>    baseline | cnn | eigenspace\n");
+    printf("  -e, --extractor  <type>    baseline | cnn\n");
     printf("  -o, --output     <csv>       output csv path\n");
     printf("  -m, --model      <onnx>      CNN model path (sets RTOR_CNN_MODEL)\n");
     printf("  -h, --help                 show help\n");
