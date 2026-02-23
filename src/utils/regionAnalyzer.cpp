@@ -11,6 +11,12 @@
 #include <limits>
 #include <vector>
 
+/*
+primaryAxisTheta computes the angle of the primary axis of a region based on its central moments.
+The angle is calculated using the formula:
+theta = 0.5 * atan2(2*mu11, mu20 - mu02)
+where mu20, mu02, and mu11 are the central moments of the region.
+*/
 float RegionAnalyzer::primaryAxisTheta(double mu20, double mu02, double mu11)
 {
     // Primary axis angle (radians):
@@ -18,6 +24,11 @@ float RegionAnalyzer::primaryAxisTheta(double mu20, double mu02, double mu11)
     return 0.5f * (float)std::atan2(2.0 * mu11, (mu20 - mu02));
 }
 
+/*
+computePixelCentralMoments calculates the central moments (mu20, mu02, mu11) for a given
+region defined by a binary mask. It iterates over the pixels in the specified ROI and
+accumulates the moments based on the pixel coordinates relative to the centroid.
+*/
 void RegionAnalyzer::computePixelCentralMoments(
     const cv::Mat &regionMask,
     const cv::Rect &roi,
@@ -27,7 +38,8 @@ void RegionAnalyzer::computePixelCentralMoments(
     // Pixel-based central moments over the filled region:
     // mu20 = sum (x-cx)^2, mu02 = sum (y-cy)^2, mu11 = sum (x-cx)(y-cy)
     mu20 = mu02 = mu11 = 0.0;
-
+    // Iterate over the pixels in the ROI and accumulate moments for pixels that
+    // belong to the region (non-zero in mask)
     for (int y = roi.y; y < roi.y + roi.height; ++y)
     {
         const uchar *row = regionMask.ptr<uchar>(y);
@@ -45,6 +57,12 @@ void RegionAnalyzer::computePixelCentralMoments(
     }
 }
 
+/*
+computeAxisExtentsFromMask calculates the extents of a region along its primary (e1) and secondary (e2) axes
+by projecting the pixels of the region (defined by the binary mask) onto these axes. It iterates over the
+pixels in the specified ROI, checks if they belong to the region, and updates the minimum and maximum
+projections (minE1, maxE1, minE2, maxE2) accordingly.
+*/
 void RegionAnalyzer::computeAxisExtentsFromMask(
     const cv::Mat &regionMask,
     const cv::Rect &roi,
@@ -59,7 +77,7 @@ void RegionAnalyzer::computeAxisExtentsFromMask(
     float mx1 = -std::numeric_limits<float>::infinity();
     float mn2 = std::numeric_limits<float>::infinity();
     float mx2 = -std::numeric_limits<float>::infinity();
-
+    // Iterate over the pixels in the ROI and update the min/max projections for pixels that belong to the region (non-zero in mask)
     for (int y = roi.y; y < roi.y + roi.height; ++y)
     {
         const uchar *row = regionMask.ptr<uchar>(y);
@@ -70,7 +88,7 @@ void RegionAnalyzer::computeAxisExtentsFromMask(
             cv::Point2f v((float)x - c.x, (float)y - c.y);
             float u1 = v.x * e1.x + v.y * e1.y;
             float u2 = v.x * e2.x + v.y * e2.y;
-
+            // Update min/max projections for the primary axis (e1) and secondary axis (e2)
             mn1 = std::min(mn1, u1);
             mx1 = std::max(mx1, u1);
             mn2 = std::min(mn2, u2);
@@ -84,13 +102,19 @@ void RegionAnalyzer::computeAxisExtentsFromMask(
         minE1 = maxE1 = minE2 = maxE2 = 0.f;
         return;
     }
-
+    // Set the output extents for the primary axis (e1) and secondary axis (e2) based on the computed min/max projections
     minE1 = mn1;
     maxE1 = mx1;
     minE2 = mn2;
     maxE2 = mx2;
 }
 
+/*
+computeFeaturesForRegion computes various geometric and second-moment features for a given region defined
+by its label ID in the labels_32s matrix. It creates a binary mask for the region, calculates moments,
+oriented bounding box, percent filled, aspect ratio, and Hu invariant moments. The computed features
+are stored in the output RegionFeatures structure.
+*/
 bool RegionAnalyzer::computeFeaturesForRegion(
     const cv::Mat &labels_32s,
     int regionId,
@@ -156,16 +180,22 @@ bool RegionAnalyzer::computeFeaturesForRegion(
             r.hu[i] = -1.0 * std::copysign(1.0, r.hu[i]) * std::log10(std::abs(r.hu[i]));
         }
     }
-
+    // Set the output region features structure with the computed features for this region
     out = std::move(r);
     return true;
 }
 
+/*
+analyzeLabels processes the input labels_32s matrix, which contains integer labels for connected regions,
+and extracts features for each region using computeFeaturesForRegion. It iterates over the unique region
+IDs in the labels matrix, computes features for each valid region, and returns a vector of RegionFeatures
+structures containing the extracted features for all regions.
+*/
 std::vector<RegionFeatures> RegionAnalyzer::analyzeLabels(const cv::Mat &labels_32s) const
 {
     CV_Assert(!labels_32s.empty());
     CV_Assert(labels_32s.type() == CV_32S);
-
+    // Find the unique region IDs in the labels matrix to determine how many regions to analyze
     double minLabel = 0.0;
     double maxLabel = 0.0;
     cv::minMaxLoc(labels_32s, &minLabel, &maxLabel);
@@ -176,10 +206,11 @@ std::vector<RegionFeatures> RegionAnalyzer::analyzeLabels(const cv::Mat &labels_
         return regions;
     }
     regions.reserve(static_cast<size_t>(maxLabel));
-
+    // Iterate over each region ID and compute features for valid regions, storing the results in the output vector
     for (int label = 1; label <= static_cast<int>(maxLabel); ++label)
     {
         RegionFeatures r;
+        // Compute features for the region with the current label ID and add it to the output vector if valid
         if (computeFeaturesForRegion(labels_32s, label, r))
         {
             regions.push_back(std::move(r));
@@ -189,6 +220,10 @@ std::vector<RegionFeatures> RegionAnalyzer::analyzeLabels(const cv::Mat &labels_
     return regions;
 }
 
+/*
+getShapeFeatureVector constructs a feature vector for a given region based on its geometric and second-moment features.
+It includes the percent filled, aspect ratio, and the 7 Hu invariant moments, resulting in a 9-dimensional feature vector.
+*/
 std::vector<double> getShapeFeatureVector(const RegionFeatures &r)
 {
     std::vector<double> fv;

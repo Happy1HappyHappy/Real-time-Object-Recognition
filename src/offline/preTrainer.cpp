@@ -42,7 +42,7 @@ int extractFeaturesToFile(
             continue;
         }
 
-        // Pre-train mode: always use only the best detected region.
+        // Pre-train mode: always use only the best detected region
         DetectionResult det = PreProcessor::detect(img, /*keepAllRegions*/ false);
         if (!det.valid || det.embImage.empty())
         {
@@ -53,12 +53,14 @@ int extractFeaturesToFile(
         int rc = -1;
         if (extractorType == ExtractorType::BASELINE)
         {
+            // For the baseline extractor, we extract features directly from the best detected region
             rc = extractor->extractRegion(det.bestRegion, &featureVector);
         }
         else
         {
             if (extractorType == ExtractorType::CNN)
             {
+                // For CNN, we need to prepare the embedding image by rotating and resizing the detected region
                 cv::Mat cnnInput;
                 const bool prepOk = utilities::prepEmbeddingImage(img, det.bestRegion, cnnInput, 224, true);
                 if (!prepOk || cnnInput.empty())

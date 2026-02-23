@@ -15,11 +15,7 @@ Description: Declares the IExtractor interface for feature extraction.
 #include <string>
 
 /*
-IExtractor interface for feature extraction.
-public:
-
-protected:
-
+IExtractor is an abstract base class that defines the interface for feature extractors.
 */
 class IExtractor
 {

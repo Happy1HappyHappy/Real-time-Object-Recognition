@@ -12,6 +12,16 @@ Description: Command line interface for the pre-trainer.
 #include <algorithm>
 #include <cstdio>
 
+/*
+parseCLI parses the command line arguments for the pre-trainer and populates the provided references with the parsed values.
+- @param argc The number of command line arguments.
+- @param argv An array of character pointers representing the command line arguments.
+- @param dirname Reference to a string that will be set to the input directory path.
+- @param extractorType Reference to an ExtractorType that will be set to the parsed extractor type.
+- @param outputBase Reference to a string that will be set to the output CSV file path.
+- @param modelPath Optional pointer to a string that will be set to the CNN model path if provided.
+- @return 0 on success, -1 on failure (e.g., missing required arguments or unknown extractor type).
+*/
 int PreTrainerCLI::parseCLI(
     int argc, char *argv[],
     std::string &dirname,

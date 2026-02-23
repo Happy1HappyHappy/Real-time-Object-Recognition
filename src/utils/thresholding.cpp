@@ -1,12 +1,23 @@
+/*
+  Claire Liu, Yu-Jing Wei
+  thresholding.cpp
+  Path: src/utils/thresholding.cpp
+  Description: Provides dynamic thresholding functionality using K-means clustering.
+*/
+
 #include "thresholding.hpp"
 #include <opencv2/opencv.hpp>
 
-// Utlizing K-means to dinamiclly threadshold the image
-// The image will be coverted to grey and apply Gassian Blur to reduce noise
-// param: CV_8UC3 color image
-void Threadsholding::dynamicThreadsHold(const cv::Mat &src, cv::Mat &dst)
+/*
+dynamicThreshold applies K-means clustering to determine an optimal threshold for binarizing the input image.
+It converts the input image to grayscale if necessary, reshapes it for K-means, and then performs clustering
+to find two centers. The threshold is set to the midpoint between these centers, and the output binary image
+is created using this threshold. The function also inverts the binary image to ensure that darker objects become
+foreground, which is suitable for white-background scenes.
+*/
+void Thresholding::dynamicThreshold(const cv::Mat &src, cv::Mat &dst)
 {
-    // Convert image to grey scale
+    // Convert image to grey scale if it's not already
     cv::Mat gray;
     if (src.channels() == 3)
     {

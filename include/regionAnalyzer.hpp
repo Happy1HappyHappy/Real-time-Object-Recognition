@@ -11,6 +11,11 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+/*
+RegionFeatures struct holds various geometric and shape features for a labeled region in an image.
+It includes basic geometry features like area and centroid, second-order moments for orientation,
+and a shape feature vector that includes percent filled, aspect ratio, and Hu invariant moments.
+*/
 struct RegionFeatures
 {
 
@@ -43,6 +48,12 @@ struct RegionFeatures
   double hu[7] = {0}; // Hu invariant moments
 };
 
+/*
+RegionAnalyzer class provides methods to compute geometric and shape features for labeled regions in an image.
+It includes a nested Params struct for configuring the analysis, such as whether to keep masks,
+minimum area threshold, and whether to analyze only external contours. The class can compute features
+like area, centroid, second-order moments, orientation, and Hu invariant moments for each region.
+*/
 class RegionAnalyzer
 {
 public:
