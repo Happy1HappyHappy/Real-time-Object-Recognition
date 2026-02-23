@@ -135,6 +135,7 @@ graph TD
 - **`main.cpp`**: Entry point for the real-time application.
 - **`RTObjectRecognitionApp.cpp`**: Main application logic, handling the video loop, key events, and coordinating detection and matching.
 - **`preTrainer.cpp`**: CLI tool for offline batch feature extraction and database generation.
+- **`preTrainerCLI.cpp`**: Command-line interface and argument parsing for the pre-trainer.
 
 ### Feature Extraction
 - **`IExtractor.hpp`**: Abstract interface for all feature extractors.
@@ -142,9 +143,11 @@ graph TD
 - **`extractorFactory.cpp`**: Factory for creating specific extractor instances based on type.
 
 ### Processing & Analysis
-- **`preProcessor.cpp`**: High-level detection pipeline (thresholding → cleaning → region analysis).
-- **`regionAnalyzer.cpp`**: Computes spatial moments, centroid, oriented bounding box, and shape features for regions.
-- **`thresholding.cpp`**: Implements various image thresholding techniques.
+- **`preProcessor.cpp`**: High-level detection pipeline coordinating thresholding, cleaning, and region identification.
+- **`regionDetect.cpp`**: Implements two-pass connected component labeling for region segmentation.
+- **`distanceTransform.cpp`**: Implements the Grassfire algorithm for distance transform operations.
+- **`regionAnalyzer.cpp`**: Computes spatial moments, centroid, oriented bounding box, and shape features for objects.
+- **`thresholding.cpp`**: Implements dynamic and static image thresholding techniques.
 - **`morphologicalFilter.cpp`**: Provides erosion, dilation, and cleaning operations to refine binary masks.
 
 ### Matching & Data
