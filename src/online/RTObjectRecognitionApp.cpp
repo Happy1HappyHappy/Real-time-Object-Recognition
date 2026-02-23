@@ -13,6 +13,7 @@ Description: Real-time object recognition using feature matching.
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <opencv2/opencv.hpp>
 #include "csvUtil.hpp"
@@ -27,6 +28,35 @@ Description: Real-time object recognition using feature matching.
 namespace
 {
 constexpr bool kVerboseFrameLogs = false;
+
+bool isUnknownMatch(const AppState &st, ExtractorType type, float distance)
+{
+    if (!st.rejectUnknown || !std::isfinite(distance))
+    {
+        return false;
+    }
+    switch (type)
+    {
+    case BASELINE:
+        return distance > st.baselineUnknownThreshold;
+    case CNN:
+        return distance > st.cnnUnknownThreshold;
+    case EIGENSPACE:
+        return distance > st.eigenspaceUnknownThreshold;
+    default:
+        return false;
+    }
+}
+
+std::string thresholdsSummary(const AppState &st)
+{
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2)
+        << "B<=" << st.baselineUnknownThreshold
+        << " C<=" << st.cnnUnknownThreshold
+        << " E<=" << st.eigenspaceUnknownThreshold;
+    return oss.str();
+}
 }
 
 std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType type)
@@ -221,9 +251,10 @@ int RTObjectRecognitionApp::run()
                     if (extractOk && FeatureMatcher::match(featureVector, baselineDbPath, MetricType::SSD, matchResult))
                     {
                         st.hasBaselinePrediction = true;
-                        st.baselineLabel = matchResult.label;
                         st.baselineDistance = matchResult.distance;
-                        parts.push_back("B:" + matchResult.label);
+                        const bool unknown = isUnknownMatch(st, BASELINE, matchResult.distance);
+                        st.baselineLabel = unknown ? st.unknownLabel : matchResult.label;
+                        parts.push_back("B:" + st.baselineLabel);
                     }
                     else
                     {
@@ -242,11 +273,12 @@ int RTObjectRecognitionApp::run()
                         if (prepOk && classifyByExtractor(cnnExtractor, cnnInput, cnnDbPath, matchResult, MetricType::SSD))
                         {
                             st.hasCnnPrediction = true;
-                            st.cnnLabel = matchResult.label;
                             st.cnnDistance = matchResult.distance;
-                            st.cachedCnnLabels[i] = matchResult.label;
+                            const bool unknown = isUnknownMatch(st, CNN, matchResult.distance);
+                            st.cnnLabel = unknown ? st.unknownLabel : matchResult.label;
+                            st.cachedCnnLabels[i] = st.cnnLabel;
                             st.cachedCnnDistances[i] = matchResult.distance;
-                            parts.push_back("C:" + matchResult.label);
+                            parts.push_back("C:" + st.cnnLabel);
                         }
                         else
                         {
@@ -281,9 +313,10 @@ int RTObjectRecognitionApp::run()
                     if (classifyByExtractor(eigenspaceExtractor, roi, eigenspaceDbPath, matchResult))
                     {
                         st.hasEigenspacePrediction = true;
-                        st.eigenspaceLabel = matchResult.label;
                         st.eigenspaceDistance = matchResult.distance;
-                        parts.push_back("E:" + matchResult.label);
+                        const bool unknown = isUnknownMatch(st, EIGENSPACE, matchResult.distance);
+                        st.eigenspaceLabel = unknown ? st.unknownLabel : matchResult.label;
+                        parts.push_back("E:" + st.eigenspaceLabel);
                     }
                     else
                     {
@@ -457,7 +490,7 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
     {
         cv::putText(display, "Press 't' train, 'd' debug OBB/axis, 's' screenshot, 'q' quit",
                     {20, 30}, cv::FONT_HERSHEY_DUPLEX, 0.7, {100, 100, 100}, 2, cv::LINE_AA);
-        cv::putText(display, "Press '1' threshold, '2' cleaned, '3' region map windows",
+        cv::putText(display, "Press '1' threshold, '2' cleaned, '3' region map, 'u' unknown, '['/']' tune",
                     {20, 55}, cv::FONT_HERSHEY_DUPLEX, 0.65, {100, 100, 100}, 2, cv::LINE_AA);
     }
 
@@ -472,8 +505,13 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
                 {100, 100, 100}, 2, cv::LINE_AA);
 
     cv::putText(display,
+                "Unknown reject: " + onOff(st.rejectUnknown) + "  " + thresholdsSummary(st),
+                {20, 120}, cv::FONT_HERSHEY_DUPLEX, 0.6,
+                st.rejectUnknown ? cv::Scalar(100, 220, 255) : cv::Scalar(100, 100, 100), 2, cv::LINE_AA);
+
+    cv::putText(display,
                 std::string("Detection: ") + (st.lastDetection.valid ? "VALID" : "NONE"),
-                {20, 125},
+                {20, 145},
                 cv::FONT_HERSHEY_DUPLEX,
                 0.65,
                 st.lastDetection.valid ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 180, 255),
@@ -514,7 +552,7 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
     {
         std::ostringstream summary;
         summary << "Pred Regions: " << st.predictedTexts.size();
-        cv::putText(display, summary.str(), {20, 155},
+        cv::putText(display, summary.str(), {20, 175},
                     cv::FONT_HERSHEY_DUPLEX, 0.75, cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
 
         for (size_t i = 0; i < st.predictedTexts.size() && i < st.predictedBoxes.size(); ++i)
@@ -708,6 +746,29 @@ bool RTObjectRecognitionApp::handleKey(AppState &st, int key, const cv::Size &re
                 st.writer.release();
                 std::cout << "STOPPED Recording. File saved.\n";
             }
+            return true;
+        }
+        if (key == 'u' || key == 'U')
+        {
+            st.rejectUnknown = !st.rejectUnknown;
+            std::cout << "Unknown reject: " << (st.rejectUnknown ? "ON" : "OFF")
+                      << " (" << thresholdsSummary(st) << ")\n";
+            return true;
+        }
+        if (key == '[' || key == '{')
+        {
+            st.baselineUnknownThreshold = std::max(0.01f, st.baselineUnknownThreshold * 0.9f);
+            st.cnnUnknownThreshold = std::max(0.01f, st.cnnUnknownThreshold * 0.9f);
+            st.eigenspaceUnknownThreshold = std::max(0.01f, st.eigenspaceUnknownThreshold * 0.9f);
+            std::cout << "Unknown thresholds tightened: " << thresholdsSummary(st) << "\n";
+            return true;
+        }
+        if (key == ']' || key == '}')
+        {
+            st.baselineUnknownThreshold *= 1.1f;
+            st.cnnUnknownThreshold *= 1.1f;
+            st.eigenspaceUnknownThreshold *= 1.1f;
+            std::cout << "Unknown thresholds loosened: " << thresholdsSummary(st) << "\n";
             return true;
         }
     }
