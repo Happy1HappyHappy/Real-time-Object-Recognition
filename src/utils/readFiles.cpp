@@ -15,8 +15,6 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <chrono>
-#include <iostream>
 
 /*
   Given a directory on the command line, scans through the directory for image files.
@@ -86,7 +84,6 @@ The function populates the provided vectors with the filenames and their corresp
 */
 int ReadFiles::readFeaturesFromCSV(const char *filename, std::vector<std::string> &filenames, std::vector<std::vector<float>> &data)
 {
-    const auto t0 = std::chrono::steady_clock::now();
     filenames.clear();
     data.clear();
 
@@ -144,12 +141,6 @@ int ReadFiles::readFeaturesFromCSV(const char *filename, std::vector<std::string
         filenames.push_back(label);
         data.push_back(std::move(fv));
     }
-
-    const auto t1 = std::chrono::steady_clock::now();
-    const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-    std::cout << "[PERF][ReadFiles::readFeaturesFromCSV] file=" << filename
-              << " rows=" << data.size()
-              << " ms=" << ms << "\n";
 
     return 0;
 }
