@@ -503,9 +503,8 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
                 cv::line(display, obbPts[i], obbPts[(i + 1) % 4], cv::Scalar(0, 255, 255), 2, cv::LINE_AA);
             }
 
-            const float axisLen = 0.5f * std::max(r.orientedBBox.size.width, r.orientedBBox.size.height);
-            const cv::Point2f p1 = r.centroid - r.e1 * axisLen;
-            const cv::Point2f p2 = r.centroid + r.e1 * axisLen;
+            const cv::Point2f p1 = r.centroid + r.e1 * r.minE1;
+            const cv::Point2f p2 = r.centroid + r.e1 * r.maxE1;
             cv::line(display, p1, p2, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
         }
     }
