@@ -25,6 +25,9 @@ struct AppState
     bool cnnOn = false;
     bool eigenspaceOn = false;
     bool debugOn = false;
+    bool showThresholdWindow = false;
+    bool showCleanedWindow = false;
+    bool showRegionMapWindow = false;
 
     bool trainingOn = false;
     std::string label;
@@ -44,10 +47,14 @@ struct AppState
     float eigenspaceDistance = 0.0f;
     std::vector<cv::Rect> predictedBoxes;
     std::vector<std::string> predictedTexts;
+    std::vector<std::string> cachedCnnLabels;
+    std::vector<float> cachedCnnDistances;
 
     bool recordingOn = false;
     cv::VideoWriter writer;
     double fps = 24.0;
+    int cnnIntervalFrames = 3; // run CNN every N frames
+    int maxCnnRegionsPerFrame = 2; // cap CNN inference count per frame
 
     std::filesystem::path resultsDir = "./results/";
     std::filesystem::path dataDir = "./data/";
@@ -69,7 +76,8 @@ private:
         ExtractorType type,
         const cv::Mat &embImage,
         const std::string &savedPath,
-        const RegionFeatures *bestRegion = nullptr);
+        const RegionFeatures *bestRegion = nullptr,
+        const cv::Mat *sourceFrame = nullptr);
     std::string sanitizeLabel(std::string s);
     std::string timestampNow();
     void handleTrainingKey(AppState &st, int key, const cv::Mat &frame, const DetectionResult &det);

@@ -33,6 +33,7 @@ public:
         std::string inputDir;
         std::string extractorStr;
         std::string outputPath;
+        std::string modelPath;
         bool showHelp = false;
     };
 
@@ -40,7 +41,8 @@ public:
         int argc, char *argv[],
         std::string &dirname,
         ExtractorType &extractorType,
-        std::string &outputBase);
+        std::string &outputBase,
+        std::string *modelPath = nullptr);
     static Args parse(int argc, char *argv[]);
     static void printUsage(const char *prog);
 };

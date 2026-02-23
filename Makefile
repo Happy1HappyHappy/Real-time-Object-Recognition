@@ -41,11 +41,22 @@ LDFLAGS = -L/opt/homebrew/opt/opencv/lib -mmacosx-version-min=$(MACOS_VERSION)
 # LDLIBS = -ltiff -lpng -ljpeg -llapack -lblas -lz -ljasper -lwebp -lIlmImf -lgs -framework AVFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices -framework CoreGraphics -framework AppKit -framework OpenCL  -lopencv_core -lopencv_highgui -lopencv_video -lopencv_videoio -lopencv_imgcodecs -lopencv_imgproc -lopencv_objdetect
 LDLIBS = \
 	-lopencv_core \
+	-lopencv_dnn \
 	-lopencv_highgui \
 	-lopencv_imgcodecs \
 	-lopencv_imgproc \
 	-lopencv_videoio \
 	-lopencv_objdetect
+
+# Optional ONNX Runtime integration:
+# Example:
+#   make ONNXRUNTIME_DIR=/opt/homebrew/opt/onnxruntime
+ONNXRUNTIME_DIR ?= $(shell if [ -d /opt/homebrew/opt/onnxruntime/include ] && [ -d /opt/homebrew/opt/onnxruntime/lib ]; then echo /opt/homebrew/opt/onnxruntime; fi)
+ifneq ($(ONNXRUNTIME_DIR),)
+	CXXFLAGS += -DENABLE_ONNXRUNTIME -I$(ONNXRUNTIME_DIR)/include
+	LDFLAGS += -L$(ONNXRUNTIME_DIR)/lib
+	LDLIBS += -lonnxruntime
+endif
 
 
 BINDIR = ./bin
@@ -88,6 +99,7 @@ COMMON_OBJS = $(OBJDIR)/csvUtil.o \
 			  $(OBJDIR)/regionAnalyzer.o \
               $(OBJDIR)/readFiles.o \
 			  $(OBJDIR)/regionDetect.o \
+			  $(OBJDIR)/utilities.o \
 			  $(OBJDIR)/thresholding.o \
 			  $(OBJDIR)/morphologicalFilter.o
 

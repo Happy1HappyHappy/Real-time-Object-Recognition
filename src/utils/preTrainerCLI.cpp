@@ -16,7 +16,8 @@ int PreTrainerCLI::parseCLI(
     int argc, char *argv[],
     std::string &dirname,
     ExtractorType &extractorType,
-    std::string &outputBase)
+    std::string &outputBase,
+    std::string *modelPath)
 {
     // Parse command line arguments
     auto args = parse(argc, argv);
@@ -38,6 +39,10 @@ int PreTrainerCLI::parseCLI(
     // get the directory path, extractor type and output file path
     dirname = args.inputDir;
     outputBase = args.outputPath;
+    if (modelPath)
+    {
+        *modelPath = args.modelPath;
+    }
     extractorType = ExtractorFactory::stringToExtractorType(args.extractorStr.c_str());
     // Check if the extractor type is valid
     if (extractorType == UNKNOWN_EXTRACTOR)
@@ -63,13 +68,14 @@ PreTrainerCLI::Args PreTrainerCLI::parse(int argc, char *argv[])
         {"input", required_argument, 0, 'i'},
         {"extractor", required_argument, 0, 'e'},
         {"output", required_argument, 0, 'o'},
+        {"model", required_argument, 0, 'm'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
     optind = 1; // reset getopt state
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "i:e:o:h", long_options, nullptr)) != -1)
+    while ((opt = getopt_long(argc, argv, "i:e:o:m:h", long_options, nullptr)) != -1)
     {
         switch (opt)
         {
@@ -83,6 +89,9 @@ PreTrainerCLI::Args PreTrainerCLI::parse(int argc, char *argv[])
         }
         case 'o':
             args.outputPath = optarg;
+            break;
+        case 'm':
+            args.modelPath = optarg;
             break;
         case 'h':
             args.showHelp = true;
@@ -102,12 +111,13 @@ Prints the usage information for the pre-trainer.
 void PreTrainerCLI::printUsage(const char *prog)
 {
     printf("usage:\n");
-    printf("  %s --input <dir> --extractor <type> --output <csv>\n", prog);
-    printf("  %s -i <dir> -e <type> -o <csv>\n", prog);
+    printf("  %s --input <dir> --extractor <type> --output <csv> [--model <onnx>]\n", prog);
+    printf("  %s -i <dir> -e <type> -o <csv> [-m <onnx>]\n", prog);
     printf("\n");
     printf("options:\n");
     printf("  -i, --input      <dir>       input image directory\n");
     printf("  -e, --extractor  <type>    baseline | cnn | eigenspace\n");
     printf("  -o, --output     <csv>       output csv path\n");
+    printf("  -m, --model      <onnx>      CNN model path (sets RTOR_CNN_MODEL)\n");
     printf("  -h, --help                 show help\n");
 }
