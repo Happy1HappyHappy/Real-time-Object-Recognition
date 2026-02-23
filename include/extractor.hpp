@@ -13,6 +13,12 @@ Description: Header file for extractor.cpp to extract features from images.
 #include <vector>
 #include <opencv2/core.hpp>
 
+/*
+BaselineExtractor: A simple feature extractor that computes basic geometric and
+    shape features from the input image or region.
+CNNExtractor: A more complex feature extractor that uses a Convolutional Neural
+    Network (CNN) to extract high-level features from the input image or region.
+*/
 struct BaselineExtractor : public IExtractor
 {
     BaselineExtractor(ExtractorType type) : IExtractor(type) {}

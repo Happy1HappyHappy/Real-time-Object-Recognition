@@ -95,7 +95,6 @@ all: pretrain rtor
 COMMON_OBJS = $(OBJDIR)/csvUtil.o \
 			  $(OBJDIR)/extractorFactory.o \
 			  $(OBJDIR)/extractor.o \
-			  ${OBJDIR}/filters.o \
 			  $(OBJDIR)/preProcessor.o \
 			  $(OBJDIR)/regionAnalyzer.o \
               $(OBJDIR)/readFiles.o \
@@ -115,7 +114,6 @@ rtor: $(OBJDIR)/RTObjectRecognitionApp.o \
 	  $(OBJDIR)/distanceMetrics.o \
 	  $(OBJDIR)/featureMatcher.o \
 	  $(OBJDIR)/main.o \
-	  $(OBJDIR)/matchUtil.o \
 	  $(OBJDIR)/metricFactory.o \
       $(COMMON_OBJS) \
       | $(BINDIR) $(DATADIR)

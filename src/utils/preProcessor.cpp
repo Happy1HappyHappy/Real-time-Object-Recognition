@@ -83,11 +83,6 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   MorphologicalFilter myFilter;
   myFilter.defaultDilationErosion(binary, cleanedBinary);
   result.cleanedImage = cleanedBinary.clone();
-  // Connected component labeling to find regions
-  RegionDetect::twoPassSegmentation(cleanedBinary, regionLabels);
-  // Colorize the region labels for visualization
-  result.regionIdVis = RegionDetect::colorizeRegionLabels(regionLabels);
-
   // Analyze the labeled regions to extract features and find the best candidate
   const int frameArea = input.rows * input.cols;
   const int minAreaPixels = std::max(500, frameArea / 50);
@@ -161,13 +156,6 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
 DetectionResult PreProcessor::detect(const cv::Mat &input)
 {
   return detect(input, true);
-}
-
-cv::Mat PreProcessor::process(const cv::Mat &input, cv::Mat &output)
-{
-  DetectionResult result = detect(input, false);
-  output = result.embImage;
-  return result.debugFrame;
 }
 
 cv::Mat PreProcessor::imgPreProcess(

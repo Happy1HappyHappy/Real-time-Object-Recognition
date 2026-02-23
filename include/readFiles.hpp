@@ -28,12 +28,6 @@ to read features from a CSV file.
     It reads the CSV file, extracts the filenames and their corresponding feature vectors,
     and stores them in the provided vectors.
     It returns an integer status code (e.g., 0 for success, -1 for failure).
-- isTargetImageInDatabase(
-        const char *targetPath,
-        const std::vector<char *> &dbFilenames):
-    A static method that checks if a target image (specified by its file path) is present
-    in a database of filenames. It takes the target image path and a vector of database filenames
-    as input and returns a boolean value indicating whether the target image is found in the database.
 */
 class ReadFiles
 {
@@ -47,7 +41,4 @@ public:
         std::vector<std::string> &filenames,
         std::vector<std::vector<float>> &data);
 
-    static bool isTargetImageInDatabase(
-        const char *targetPath,
-        const char *dbFilename);
 };

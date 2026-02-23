@@ -51,8 +51,9 @@ std::string thresholdsSummary(const AppState &st)
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2)
         << "B<=" << st.baselineUnknownThreshold
-        << " C<=" << st.cnnUnknownThreshold
+        << " C<=" << st.cnnUnknownThreshold;
     return oss.str();
+}
 }
 
 std::string RTObjectRecognitionApp::dbPathFor(const AppState &st, ExtractorType type)
@@ -543,8 +544,9 @@ void RTObjectRecognitionApp::drawOverlay(cv::Mat &display, const AppState &st)
 
     if (st.recordingOn)
     {
-        cv::circle(display, {30, 170}, 10, {0, 0, 255}, -1);
-        cv::putText(display, "REC", {50, 182}, cv::FONT_HERSHEY_DUPLEX, 0.8, {0, 0, 255}, 2);
+        const int y = std::max(40, display.rows - 30);
+        cv::circle(display, {30, y}, 10, {0, 0, 255}, -1);
+        cv::putText(display, "REC", {50, y + 12}, cv::FONT_HERSHEY_DUPLEX, 0.8, {0, 0, 255}, 2);
     }
 }
 
