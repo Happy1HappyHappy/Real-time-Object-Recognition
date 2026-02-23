@@ -124,8 +124,8 @@ graph TD
 ---
 
 ## Dependencies
-- **OpenCV**: Core, HighGUI, ImgProc, VideoIO, DNN.
-- **ONNX Runtime**: Utilized for ResNet18 inference if enabled.
+- **OpenCV**
+- **ONNX Runtime**
 
 ---
 
