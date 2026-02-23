@@ -37,22 +37,14 @@ struct AppState
     bool hasPrediction = false;
     bool hasBaselinePrediction = false;
     bool hasCnnPrediction = false;
-<<<<<<< Updated upstream
-    bool hasEigenspacePrediction = false;
-=======
     bool rejectUnknown = true;
     std::string unknownLabel = "UNKNOWN";
->>>>>>> Stashed changes
     std::string baselineLabel = "n/a";
     std::string cnnLabel = "n/a";
     float baselineDistance = 0.0f;
     float cnnDistance = 0.0f;
-<<<<<<< Updated upstream
-    float eigenspaceDistance = 0.0f;
-=======
     float baselineUnknownThreshold = 1.3f;
     float cnnUnknownThreshold = 30.0f;
->>>>>>> Stashed changes
     std::vector<cv::Rect> predictedBoxes;
     std::vector<std::string> predictedTexts;
     std::vector<std::string> cachedCnnLabels;

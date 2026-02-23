@@ -17,6 +17,7 @@ MACOS_VERSION = 26.2
 # OSX include paths (for homebrew, probably)
 CFLAGS = -Wc++17-extensions \
 	-std=c++17 \
+	-O3 \
 	-mmacosx-version-min=$(MACOS_VERSION) \
 	-I/opt/homebrew/include/opencv4 \
 	-I./include \

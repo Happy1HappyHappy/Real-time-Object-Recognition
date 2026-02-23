@@ -18,6 +18,72 @@ vectors.
 #include <limits>
 #include <iostream>
 #include <vector>
+#include <filesystem>
+#include <unordered_map>
+
+namespace
+{
+struct CachedFeatureDb
+{
+    std::vector<std::string> labels;
+    std::vector<std::vector<float>> data;
+    std::filesystem::file_time_type lastWriteTime{};
+    std::uintmax_t fileSize = 0;
+    bool loaded = false;
+};
+
+std::unordered_map<std::string, CachedFeatureDb> gDbCache;
+
+const CachedFeatureDb *loadCachedDb(const std::string &dbPath)
+{
+    if (dbPath.empty())
+    {
+        return nullptr;
+    }
+
+    auto it = gDbCache.find(dbPath);
+    bool needsReload = (it == gDbCache.end()) || (!it->second.loaded);
+
+    std::error_code timeEc;
+    std::error_code sizeEc;
+    const auto nowWriteTime = std::filesystem::last_write_time(dbPath, timeEc);
+    const auto nowFileSize = std::filesystem::file_size(dbPath, sizeEc);
+
+    if (!needsReload && !timeEc && !sizeEc)
+    {
+        if (it->second.lastWriteTime != nowWriteTime || it->second.fileSize != nowFileSize)
+        {
+            needsReload = true;
+        }
+    }
+
+    if (needsReload)
+    {
+        std::vector<std::string> dbLabels;
+        std::vector<std::vector<float>> dbData;
+        if (ReadFiles::readFeaturesFromCSV(dbPath.c_str(), dbLabels, dbData) != 0 || dbData.empty())
+        {
+            return nullptr;
+        }
+
+        auto &entry = gDbCache[dbPath];
+        entry.labels = std::move(dbLabels);
+        entry.data = std::move(dbData);
+        entry.loaded = true;
+        if (!timeEc)
+        {
+            entry.lastWriteTime = nowWriteTime;
+        }
+        if (!sizeEc)
+        {
+            entry.fileSize = nowFileSize;
+        }
+        return &entry;
+    }
+
+    return &it->second;
+}
+} // namespace
 
 bool FeatureMatcher::match(
     const std::vector<float> &targetFeatures,
@@ -25,13 +91,14 @@ bool FeatureMatcher::match(
     MetricType metricType,
     MatchResult &bestMatch)
 {
-    std::vector<std::string> dbLabels;
-    std::vector<std::vector<float>> dbData;
-    if (ReadFiles::readFeaturesFromCSV(dbPath.c_str(), dbLabels, dbData) != 0 || dbData.empty())
+    const CachedFeatureDb *cachedDb = loadCachedDb(dbPath);
+    if (cachedDb == nullptr || cachedDb->data.empty())
     {
         std::cout << "[MATCH] DB load failed/empty: " << dbPath << "\n";
         return false;
     }
+    const auto &dbLabels = cachedDb->labels;
+    const auto &dbData = cachedDb->data;
 
     auto distanceMetric = MetricFactory::create(metricType);
     if (!distanceMetric)
@@ -84,7 +151,6 @@ bool FeatureMatcher::match(
             invStd[i] = (sigma > 1e-6) ? (1.0 / sigma) : 1.0;
         }
     }
-
     bool found = false;
     MatchResult best{"", "", 0.0f};
     for (size_t i = 0; i < dbData.size(); ++i)
@@ -119,7 +185,6 @@ bool FeatureMatcher::match(
             best.distance = distance;
         }
     }
-
     if (!found)
     {
         std::cout << "[MATCH] no finite-distance match found\n";
