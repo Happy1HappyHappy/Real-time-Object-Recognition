@@ -138,17 +138,23 @@ cv::Mat PreProcessor::imgPreProcess(
   std::vector<cv::Mat> channels;
   cv::split(hsv, channels);
   cv::Mat saturation = channels[1];
+  cv::Mat value = channels[2];
 
   // 3. Create a mask for high saturation areas
   cv::Mat satMask;
   cv::threshold(saturation, satMask, satThreshold, 255, cv::THRESH_BINARY);
+  // 3b. Create a mask for highlight regions (very high V in HSV)
+  cv::Mat highlightMask;
+  cv::threshold(value, highlightMask, 230, 255, cv::THRESH_BINARY);
+  cv::Mat suppressMask;
+  cv::bitwise_or(satMask, highlightMask, suppressMask);
 
-  // 4. Darken the grayscale values in high saturation areas to suppress bright noise
+  // 4. Darken grayscale values in saturated/highlight regions to suppress bright noise/speculars
   cv::Mat grayFloat;
   gray.convertTo(grayFloat, CV_32F);
 
   cv::Mat darkened = grayFloat * alpha;
-  darkened.copyTo(grayFloat, satMask);
+  darkened.copyTo(grayFloat, suppressMask);
 
   // 5. Convert back to 8-bit
   grayFloat.convertTo(gray, CV_8U);
