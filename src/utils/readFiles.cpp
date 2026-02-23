@@ -51,6 +51,7 @@ int ReadFiles::readFilesInDir(char *dirname, std::vector<std::string> &files)
         if (strstr(dp->d_name, ".jpg") ||
             strstr(dp->d_name, ".png") ||
             strstr(dp->d_name, ".ppm") ||
+            strstr(dp->d_name, ".jpeg") ||
             strstr(dp->d_name, ".tif"))
         {
 
