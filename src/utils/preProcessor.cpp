@@ -16,10 +16,14 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <iostream>
 #include <opencv2/opencv.hpp>
 
 DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
 {
+  using Clock = std::chrono::steady_clock;
+  const auto tStart = Clock::now();
   DetectionResult result;
   CV_Assert(!input.empty());
 
@@ -29,18 +33,24 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   cv::Mat regionLabels;
 
   // Pre-process the image to enhance features and suppress noise
+  const auto t0 = Clock::now();
   gray = imgPreProcess(input, 0.5f, 50, 5);
+  const auto t1 = Clock::now();
   // Dynamic thresholding to get binary image
   Threadsholding::dynamicThreadsHold(gray, binary);
+  const auto t2 = Clock::now();
   result.thresholdedImage = binary.clone();
   // Morphological operations to clean up the binary image
   MorphologicalFilter myFilter;
   myFilter.defaultDilationErosion(binary, cleanedBinary);
+  const auto t3 = Clock::now();
   result.cleanedImage = cleanedBinary.clone();
   // Connected component labeling to find regions
   RegionDetect::twoPassSegmentation(cleanedBinary, regionLabels);
+  const auto t4 = Clock::now();
   // Colorize the region labels for visualization
   result.regionIdVis = RegionDetect::colorizeRegionLabels(regionLabels);
+  const auto t5 = Clock::now();
 
   // Analyze the labeled regions to extract features and find the best candidate
   const int frameArea = input.rows * input.cols;
@@ -50,6 +60,7 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
       minAreaPixels,
       /*externalOnly*/ true));
   auto regions = analyzer.analyzeLabels(regionLabels);
+  const auto t6 = Clock::now();
 
   // Initialize the DetectionResult with default values and debug visualization
   result.debugFrame = input.clone();
@@ -57,10 +68,23 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   result.regions.clear();
   result.regionBBoxes.clear();
   result.regionEmbImages.clear();
+  const auto t7 = Clock::now();
 
   // If no valid regions are found, return the result with valid=false and empty fields.
   if (regions.empty())
   {
+    const auto tEnd = Clock::now();
+    std::cout << "[PERF][PreProcessor::detect] total_ms="
+              << std::chrono::duration<double, std::milli>(tEnd - tStart).count()
+              << " imgPre_ms=" << std::chrono::duration<double, std::milli>(t1 - t0).count()
+              << " threshold_ms=" << std::chrono::duration<double, std::milli>(t2 - t1).count()
+              << " morph_ms=" << std::chrono::duration<double, std::milli>(t3 - t2).count()
+              << " ccl_ms=" << std::chrono::duration<double, std::milli>(t4 - t3).count()
+              << " colorize_ms=" << std::chrono::duration<double, std::milli>(t5 - t4).count()
+              << " analyze_ms=" << std::chrono::duration<double, std::milli>(t6 - t5).count()
+              << " setup_ms=" << std::chrono::duration<double, std::milli>(t7 - t6).count()
+              << " crop_ms=0"
+              << " regions=0\n";
     return result;
   }
   if (keepAllRegions)
@@ -99,9 +123,22 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   {
     result.embImage = input(bbox).clone();
   }
+  const auto t8 = Clock::now();
   result.valid = !result.embImage.empty();
   result.bestRegion = best;
   result.bestBBox = bbox;
+  const auto tEnd = Clock::now();
+  std::cout << "[PERF][PreProcessor::detect] total_ms="
+            << std::chrono::duration<double, std::milli>(tEnd - tStart).count()
+            << " imgPre_ms=" << std::chrono::duration<double, std::milli>(t1 - t0).count()
+            << " threshold_ms=" << std::chrono::duration<double, std::milli>(t2 - t1).count()
+            << " morph_ms=" << std::chrono::duration<double, std::milli>(t3 - t2).count()
+            << " ccl_ms=" << std::chrono::duration<double, std::milli>(t4 - t3).count()
+            << " colorize_ms=" << std::chrono::duration<double, std::milli>(t5 - t4).count()
+            << " analyze_ms=" << std::chrono::duration<double, std::milli>(t6 - t5).count()
+            << " setup_ms=" << std::chrono::duration<double, std::milli>(t7 - t6).count()
+            << " crop_ms=" << std::chrono::duration<double, std::milli>(t8 - t7).count()
+            << " regions=" << regions.size() << "\n";
   return result;
 }
 

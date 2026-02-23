@@ -18,6 +18,73 @@ vectors.
 #include <limits>
 #include <iostream>
 #include <vector>
+#include <filesystem>
+#include <unordered_map>
+#include <chrono>
+
+namespace
+{
+struct CachedFeatureDb
+{
+    std::vector<std::string> labels;
+    std::vector<std::vector<float>> data;
+    std::filesystem::file_time_type lastWriteTime{};
+    std::uintmax_t fileSize = 0;
+    bool loaded = false;
+};
+
+std::unordered_map<std::string, CachedFeatureDb> gDbCache;
+
+const CachedFeatureDb *loadCachedDb(const std::string &dbPath)
+{
+    if (dbPath.empty())
+    {
+        return nullptr;
+    }
+
+    auto it = gDbCache.find(dbPath);
+    bool needsReload = (it == gDbCache.end()) || (!it->second.loaded);
+
+    std::error_code timeEc;
+    std::error_code sizeEc;
+    const auto nowWriteTime = std::filesystem::last_write_time(dbPath, timeEc);
+    const auto nowFileSize = std::filesystem::file_size(dbPath, sizeEc);
+
+    if (!needsReload && !timeEc && !sizeEc)
+    {
+        if (it->second.lastWriteTime != nowWriteTime || it->second.fileSize != nowFileSize)
+        {
+            needsReload = true;
+        }
+    }
+
+    if (needsReload)
+    {
+        std::vector<std::string> dbLabels;
+        std::vector<std::vector<float>> dbData;
+        if (ReadFiles::readFeaturesFromCSV(dbPath.c_str(), dbLabels, dbData) != 0 || dbData.empty())
+        {
+            return nullptr;
+        }
+
+        auto &entry = gDbCache[dbPath];
+        entry.labels = std::move(dbLabels);
+        entry.data = std::move(dbData);
+        entry.loaded = true;
+        if (!timeEc)
+        {
+            entry.lastWriteTime = nowWriteTime;
+        }
+        if (!sizeEc)
+        {
+            entry.fileSize = nowFileSize;
+        }
+        return &entry;
+    }
+
+    return &it->second;
+}
+} // namespace
 
 bool FeatureMatcher::match(
     const std::vector<float> &targetFeatures,
@@ -25,15 +92,23 @@ bool FeatureMatcher::match(
     MetricType metricType,
     MatchResult &bestMatch)
 {
-    std::vector<std::string> dbLabels;
-    std::vector<std::vector<float>> dbData;
-    if (ReadFiles::readFeaturesFromCSV(dbPath.c_str(), dbLabels, dbData) != 0 || dbData.empty())
+    using Clock = std::chrono::steady_clock;
+    const auto tStart = Clock::now();
+
+    const auto t0 = Clock::now();
+    const CachedFeatureDb *cachedDb = loadCachedDb(dbPath);
+    const auto t1 = Clock::now();
+    if (cachedDb == nullptr || cachedDb->data.empty())
     {
         std::cout << "[MATCH] DB load failed/empty: " << dbPath << "\n";
         return false;
     }
+    const auto &dbLabels = cachedDb->labels;
+    const auto &dbData = cachedDb->data;
 
+    const auto t2 = Clock::now();
     auto distanceMetric = MetricFactory::create(metricType);
+    const auto t3 = Clock::now();
     if (!distanceMetric)
     {
         std::cout << "[MATCH] invalid metric for DB: " << dbPath << "\n";
@@ -84,6 +159,7 @@ bool FeatureMatcher::match(
             invStd[i] = (sigma > 1e-6) ? (1.0 / sigma) : 1.0;
         }
     }
+    const auto t4 = Clock::now();
 
     bool found = false;
     MatchResult best{"", "", 0.0f};
@@ -119,6 +195,7 @@ bool FeatureMatcher::match(
             best.distance = distance;
         }
     }
+    const auto t5 = Clock::now();
 
     if (!found)
     {
@@ -127,6 +204,17 @@ bool FeatureMatcher::match(
     }
 
     bestMatch = best;
+    const auto tEnd = Clock::now();
+    std::cout << "[PERF][FeatureMatcher::match] total_ms="
+              << std::chrono::duration<double, std::milli>(tEnd - tStart).count()
+              << " loadDb_ms=" << std::chrono::duration<double, std::milli>(t1 - t0).count()
+              << " metricCreate_ms=" << std::chrono::duration<double, std::milli>(t3 - t2).count()
+              << " invStd_ms=" << std::chrono::duration<double, std::milli>(t4 - t3).count()
+              << " distanceLoop_ms=" << std::chrono::duration<double, std::milli>(t5 - t4).count()
+              << " db_rows=" << dbData.size()
+              << " dim=" << targetFeatures.size()
+              << " metric=" << MetricFactory::metricTypeToString(metricType)
+              << "\n";
     std::cout << "[MATCH] best label=" << bestMatch.label
               << " dist=" << bestMatch.distance
               << " metric=" << MetricFactory::metricTypeToString(metricType) << "\n";
