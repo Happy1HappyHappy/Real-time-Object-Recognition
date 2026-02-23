@@ -69,7 +69,7 @@ int BaselineExtractor::extractMat(
     RegionDetect::twoPassSegmentation(cleaned, labels);
 
     const int frameArea = image.rows * image.cols;
-    const int minAreaPixels = std::max(2000, frameArea / 10);
+    const int minAreaPixels = std::max(500, frameArea / 20); // ~5% of frame
     RegionAnalyzer analyzer(RegionAnalyzer::Params(false, minAreaPixels, true));
     auto regions = analyzer.analyzeLabels(labels);
     if (regions.empty())

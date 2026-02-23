@@ -44,7 +44,7 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
 
   // Analyze the labeled regions to extract features and find the best candidate
   const int frameArea = input.rows * input.cols;
-  const int minAreaPixels = std::max(2000, frameArea / 10); // ~10% of frame
+  const int minAreaPixels = std::max(500, frameArea / 50);
   RegionAnalyzer analyzer(RegionAnalyzer::Params(
       /*keepMasks*/ false,
       minAreaPixels,
