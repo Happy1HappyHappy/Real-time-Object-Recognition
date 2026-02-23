@@ -1,8 +1,22 @@
+/*
+  Claire Liu, Yu-Jing Wei
+  RegionDetect.cpp
+  Path: src/utils/RegionDetect.cpp
+  Description: Detects connected regions in binary images and assigns unique labels.
+*/
+
 #include "regionDetect.hpp"
 
 #include <cstdint>
 #include <vector>
 
+/*
+twoPassSegmentation implements the two-pass connected component labeling algorithm.
+It takes a binary image as input and produces a label image where each connected
+region is assigned a unique integer label. The first pass assigns temporary labels
+and records equivalences, while the second pass resolves these equivalences to
+produce the final labeled image.
+*/
 void RegionDetect::twoPassSegmentation(const cv::Mat &src, cv::Mat &dst)
 {
     // make sure using 32-bit to avoid overflow
@@ -88,25 +102,33 @@ void RegionDetect::twoPassSegmentation(const cv::Mat &src, cv::Mat &dst)
     }
 }
 
+/*
+colorizeRegionLabels takes a label image where each pixel's value corresponds to a region
+ID and produces a color visualization. Each unique region ID is assigned a random color,
+and the output image is a color representation of the labeled regions. The function uses a
+random number generator to create a color palette for the regions, and then maps each pixel
+in the label image to its corresponding color in the output image.
+*/
 cv::Mat RegionDetect::colorizeRegionLabels(const cv::Mat &regionMap32S, uint64_t seed)
 {
     CV_Assert(!regionMap32S.empty());
     CV_Assert(regionMap32S.type() == CV_32S);
-
+    // Find the unique region IDs in the labels matrix to determine how many regions to visualize
     double minLabel = 0.0;
     double maxLabel = 0.0;
     cv::minMaxLoc(regionMap32S, &minLabel, &maxLabel);
-
+    // Create a color visualization image initialized to black; each region will be colored based on its label ID
     cv::Mat vis = cv::Mat::zeros(regionMap32S.size(), CV_8UC3);
     if (maxLabel < 1.0)
     {
         return vis;
     }
-
+    // Generate a random color palette for the regions based on the maximum label ID, using the provided seed for reproducibility
     const int maxId = static_cast<int>(maxLabel);
     const uint64_t rngSeed = (seed == 0) ? 0x9E3779B97F4A7C15ULL : seed;
     cv::RNG rng(static_cast<uint64>(rngSeed));
-
+    // Create a color palette where each index corresponds to a region ID, and assign a random color to
+    // each region ID (starting from 1, since 0 is background)
     std::vector<cv::Vec3b> palette(static_cast<size_t>(maxId) + 1, cv::Vec3b(0, 0, 0));
     for (int id = 1; id <= maxId; ++id)
     {
@@ -115,7 +137,8 @@ cv::Mat RegionDetect::colorizeRegionLabels(const cv::Mat &regionMap32S, uint64_t
             static_cast<uchar>(rng.uniform(40, 256)),
             static_cast<uchar>(rng.uniform(40, 256)));
     }
-
+    // Map each pixel in the label image to its corresponding color in the output visualization image
+    // based on the region ID, using the generated color palette
     for (int y = 0; y < regionMap32S.rows; ++y)
     {
         const int *src = regionMap32S.ptr<int>(y);

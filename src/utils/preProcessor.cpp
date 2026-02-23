@@ -19,6 +19,10 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 
+/*
+filterLabelsByMinArea takes a binary image and filters connected components based on a minimum area threshold.
+It returns a new label image where only components with area >= minAreaPixels are retained and relabeled sequentially.
+*/
 cv::Mat PreProcessor::filterLabelsByMinArea(const cv::Mat &binary, int minAreaPixels)
 {
   CV_Assert(!binary.empty());
@@ -27,12 +31,14 @@ cv::Mat PreProcessor::filterLabelsByMinArea(const cv::Mat &binary, int minAreaPi
   cv::Mat stats;
   cv::Mat centroids;
   cv::Mat ccLabels;
+  // Perform connected components analysis to label the binary image and compute stats for each component
   const int numLabels = cv::connectedComponentsWithStats(binary, ccLabels, stats, centroids, 8, CV_32S);
   if (numLabels <= 1)
   {
     return cv::Mat::zeros(binary.size(), CV_32S);
   }
-
+  // Filter out components that do not meet the minimum area requirement and create a new label image with
+  // sequential IDs for valid components.
   cv::Mat filteredLabels = cv::Mat::zeros(ccLabels.size(), CV_32S);
   std::unordered_map<int, int> remap;
   int nextId = 1;
@@ -44,7 +50,7 @@ cv::Mat PreProcessor::filterLabelsByMinArea(const cv::Mat &binary, int minAreaPi
       remap[id] = nextId++;
     }
   }
-
+  // Remap the original labels to the new sequential IDs in the filtered label image
   for (int y = 0; y < ccLabels.rows; ++y)
   {
     const int *srcRow = ccLabels.ptr<int>(y);
@@ -64,6 +70,12 @@ cv::Mat PreProcessor::filterLabelsByMinArea(const cv::Mat &binary, int minAreaPi
   return filteredLabels;
 }
 
+/*
+detect processes the input image to find connected regions, extract features,
+and identify the best candidate region based on area. It returns a DetectionResult
+containing the best region's embedding image, bounding box, and other relevant
+information for downstream classification and visualization.
+*/
 DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
 {
   DetectionResult result;
@@ -77,7 +89,7 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   // Pre-process the image to enhance features and suppress noise
   gray = imgPreProcess(input, 0.5f, 50, 5);
   // Dynamic thresholding to get binary image
-  Threadsholding::dynamicThreadsHold(gray, binary);
+  Thresholding::dynamicThreshold(gray, binary);
   result.thresholdedImage = binary.clone();
   // Morphological operations to clean up the binary image
   MorphologicalFilter myFilter;
@@ -153,11 +165,20 @@ DetectionResult PreProcessor::detect(const cv::Mat &input, bool keepAllRegions)
   return result;
 }
 
+/*
+overloaded detect function that defaults to keepAllRegions=true for backward compatibility.
+*/
 DetectionResult PreProcessor::detect(const cv::Mat &input)
 {
   return detect(input, true);
 }
 
+/*
+imgPreProcess applies a series of pre-processing steps to the input image to enhance features and suppress noise.
+It converts the image to grayscale, applies Gaussian blur, analyzes saturation and highlights in HSV space to
+create masks, and darkens the grayscale values in those regions to reduce the impact of bright noise and specular
+reflections. The processed grayscale image is returned for further analysis.
+*/
 cv::Mat PreProcessor::imgPreProcess(
     const cv::Mat &input,
     float alpha,

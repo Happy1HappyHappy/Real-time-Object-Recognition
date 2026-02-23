@@ -24,10 +24,16 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 
+// If ONNXRUNTIME is enabled, include the header for ONNX Runtime C++ API
 #if defined(ENABLE_ONNXRUNTIME)
 #include <onnxruntime/onnxruntime_cxx_api.h>
 #endif
 
+/*
+BaselineExtractor extracts a handcrafted feature vector from the given image or region for use in the baseline extractor mode.
+The extractMat function processes the whole image to find the largest region and then extracts features from that region,
+while the extractRegion function directly extracts features from a given RegionFeatures struct.
+*/
 int BaselineExtractor::extractRegion(
     const RegionFeatures &region,
     std::vector<float> *featureVector) const
@@ -36,7 +42,7 @@ int BaselineExtractor::extractRegion(
     {
         return -1;
     }
-
+    // get the shape feature vector for the region and convert it to a float vector for output
     const std::vector<double> shape = getShapeFeatureVector(region);
     featureVector->clear();
     featureVector->reserve(shape.size());
@@ -47,6 +53,9 @@ int BaselineExtractor::extractRegion(
     return featureVector->empty() ? -1 : 0;
 }
 
+/*
+BaselineExtractor::extractMat processes the input image to find the largest region and extract features from it using extractRegion.
+*/
 int BaselineExtractor::extractMat(
     const cv::Mat &image,
     std::vector<float> *featureVector) const
@@ -55,18 +64,19 @@ int BaselineExtractor::extractMat(
     {
         return -1;
     }
-
+    // preprocess the image to get a binary mask of potential object regions
     cv::Mat pre = PreProcessor::imgPreProcess(image, 0.5f, 50, 5);
     cv::Mat binary;
-    Threadsholding::dynamicThreadsHold(pre, binary);
-
+    // Use dynamic thresholding to handle varying lighting conditions, followed by morphological operations to clean up the mask
+    Thresholding::dynamicThreshold(pre, binary);
+    // morphological filtering to remove noise and fill gaps in the detected regions
     MorphologicalFilter mf;
     cv::Mat cleaned;
     mf.defaultDilationErosion(binary, cleaned);
-
+    // Perform connected component analysis to find distinct regions in the binary mask
     cv::Mat labels;
     RegionDetect::twoPassSegmentation(cleaned, labels);
-
+    // Analyze the labeled regions to compute their features and find the largest valid region for feature extraction
     const int frameArea = image.rows * image.cols;
     const int minAreaPixels = std::max(500, frameArea / 20); // ~5% of frame
     RegionAnalyzer analyzer(RegionAnalyzer::Params(false, minAreaPixels, true));
@@ -75,7 +85,7 @@ int BaselineExtractor::extractMat(
     {
         return -1;
     }
-
+    // Find the largest region by area and extract features from it
     auto best = std::max_element(
         regions.begin(), regions.end(),
         [](const RegionFeatures &a, const RegionFeatures &b)
@@ -88,6 +98,10 @@ int BaselineExtractor::extractMat(
     return extractRegion(*best, featureVector);
 }
 
+/*
+CNNExtractor::extractMat processes the input image to extract a feature vector using a CNN model.
+If ONNXRUNTIME is enabled, it runs inference using the specified ONNX model; otherwise, it returns an error.
+*/
 int CNNExtractor::extractMat(
     const cv::Mat &image,
     std::vector<float> *featureVector) const

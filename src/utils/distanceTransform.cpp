@@ -1,9 +1,22 @@
+/*
+  Claire Liu, Yu-Jing Wei
+  distanceTransform.cpp
+
+  Path: src/utils/distanceTransform.cpp
+  Description: Implements distance transform algorithms for image processing.
+*/
+
 #include "distanceTransform.hpp"
 #include <opencv2/opencv.hpp>
 
-// Grassfire algorithm.
-// Input: binary image (CV_8UC1, 0 for background, 255 for foreground).
-// Output: region map (CV_8UC1, 0 for background, 1 for region 1, 2 for region 2, ...).
+/*
+grassfire implements the grassfire distance transform algorithm on a binary image.
+It computes the distance of each foreground pixel to the nearest background pixel and stores the result in regionMap.
+input:
+- src: a binary image (CV_8UC1) where foreground pixels are non-zero and background pixels are zero.
+output:
+- regionMap: a CV_8UC1 image where each pixel value represents the distance to the nearest background pixel.
+*/
 void DistanceTransform::grassfire(cv::Mat &src, cv::Mat &regionMap)
 {
     int maxVal = 1;

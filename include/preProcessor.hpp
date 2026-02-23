@@ -11,6 +11,9 @@
 #include <opencv2/opencv.hpp>
 #include "regionAnalyzer.hpp"
 
+/*
+DetectionResult struct encapsulates the results of the image pre-processing and region detection steps.
+*/
 struct DetectionResult
 {
     bool valid = false;
@@ -26,6 +29,11 @@ struct DetectionResult
     cv::Mat debugFrame;
 };
 
+/*
+PreProcessor class provides static methods for pre-processing input images, including thresholding,
+morphological filtering, and region detection. It offers both a default detection method and an
+overloaded version that allows users to specify whether to keep all detected regions or only the best one.
+*/
 class PreProcessor
 {
 public:

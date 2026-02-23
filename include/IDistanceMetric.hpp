@@ -14,12 +14,6 @@ Description: Header file for IDistanceMetric to define the interface for distanc
 /*
 IDistanceMetric is an abstract base class that defines the interface for distance metrics
 used to compare feature vectors.
-- compute(const std::vector<float> &features1, const std::vector<float> &features2):
-    A pure virtual function that takes two feature vectors as input and returns a float representing the
-    distance between them. This function must be overridden by any concrete distance metric class that
-    inherits from IDistanceMetric.
-- type() const: A virtual function that returns the MetricType of the distance metric. This allows users
-    to identify which metric is being used when comparing feature vectors.
 */
 class IDistanceMetric
 {
